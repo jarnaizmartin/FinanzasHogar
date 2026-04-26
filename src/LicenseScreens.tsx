@@ -4,14 +4,22 @@
 
 import React, { useState } from 'react';
 import { useLicense } from './LicenseContext';
-import { Shield, Clock, Lock, Key, CheckCircle, AlertTriangle } from 'lucide-react';
+import {
+  Shield,
+  Clock,
+  Lock,
+  Key,
+  CheckCircle,
+  AlertTriangle,
+  Copy,
+  Check,
+} from 'lucide-react';
 
 // ── 1. BANNER DE TRIAL ───────────────────────────────────────
-// Se muestra en la parte superior cuando el trial está activo
 
 export function TrialBanner() {
   const { isTrial, isGraceTrial, daysRemaining, isActivated } = useLicense();
-  const [showActivation, setShowActivation] = useState(false);
+  const [showRequest, setShowRequest] = useState(false);
 
   if ((!isTrial && !isGraceTrial) || isActivated) return null;
 
@@ -21,9 +29,7 @@ export function TrialBanner() {
     <>
       <div
         className={`w-full px-4 py-2 flex items-center justify-between text-sm font-medium ${
-          isUrgent
-            ? 'bg-red-500 text-white'
-            : 'bg-amber-400 text-amber-900'
+          isUrgent ? 'bg-red-500 text-white' : 'bg-amber-400 text-amber-900'
         }`}
       >
         <div className="flex items-center gap-2">
@@ -31,65 +37,43 @@ export function TrialBanner() {
           {isGraceTrial
             ? daysRemaining === 0
               ? 'Tu licencia ha caducado · Último día de gracia'
-              : `Tu licencia ha caducado · ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} de gracia restante${daysRemaining !== 1 ? 's' : ''}`
+              : `Tu licencia ha caducado · ${daysRemaining} día${
+                  daysRemaining !== 1 ? 's' : ''
+                } de gracia restante${daysRemaining !== 1 ? 's' : ''}`
             : daysRemaining === 0
-              ? 'Tu período de prueba termina hoy'
-              : `Período de prueba: ${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} restante${daysRemaining !== 1 ? 's' : ''}`}
+            ? 'Tu período de prueba termina hoy'
+            : `Período de prueba: ${daysRemaining} día${
+                daysRemaining !== 1 ? 's' : ''
+              } restante${daysRemaining !== 1 ? 's' : ''}`}
         </div>
         <button
-          onClick={() => setShowActivation(true)}
+          onClick={() => setShowRequest(true)}
           className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
             isUrgent
               ? 'bg-white text-red-500 hover:bg-red-50'
               : 'bg-amber-900 text-amber-100 hover:bg-amber-800'
           }`}
         >
-          {isGraceTrial ? 'Renovar licencia' : 'Activar licencia'}
+          Solicitar licencia
         </button>
-
       </div>
 
-      {showActivation && (
-        <ActivationModal onClose={() => setShowActivation(false)} />
+      {showRequest && (
+        <RequestLicenseModal onClose={() => setShowRequest(false)} />
       )}
     </>
   );
 }
 
 // ── 2. PANTALLA DE EXPIRACIÓN ────────────────────────────────
-// Bloquea la app cuando el trial ha expirado
 
 export function ExpiredScreen({ onActivate }: { onActivate: () => void }) {
   const { isGraceTrial } = useLicense();
-  const [contactStatus, setContactStatus] = useState<
-    'idle' | 'loading' | 'success' | 'error'
-  >('idle');
-
-  const handleContact = async () => {
-    setContactStatus('loading');
-    try {
-      const { default: emailjs } = await import('@emailjs/browser');
-      const deviceId = localStorage.getItem('fh_device_id') ?? 'No disponible';
-      await emailjs.send(
-        'service_2n3xw16',
-        'template_85h265d',
-        {
-          to_email: 'jarnaiz.martin@gmail.com',
-          code: `SOLICITUD DE LICENCIA\n\nDevice ID: ${deviceId}`,
-        },
-        'ibuKBzaykTwjkn95o'
-      );
-      setContactStatus('success');
-    } catch (err) {
-      console.error('[EmailJS]', err);
-      setContactStatus('error');
-    }
-  };
+  const [showRequest, setShowRequest] = useState(false);
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
-
         {/* Icono */}
         <div className="flex justify-center mb-4">
           <div className="bg-red-100 rounded-full p-4">
@@ -114,7 +98,7 @@ export function ExpiredScreen({ onActivate }: { onActivate: () => void }) {
             : 'Activa tu licencia para seguir usando la aplicación sin limitaciones.'}
         </p>
 
-        {/* Qué pierde */}
+        {/* Qué puede hacer */}
         <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
           <p className="text-sm font-semibold text-gray-700 mb-2">
             En modo lectura puedes:
@@ -129,86 +113,243 @@ export function ExpiredScreen({ onActivate }: { onActivate: () => void }) {
           </ul>
         </div>
 
-        {/* Botón activar licencia */}
+        {/* Botón principal — abre Modal 1 */}
         <button
-          onClick={onActivate}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mb-3"
+          onClick={() => setShowRequest(true)}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
           <Key size={18} />
-          Introducir código de licencia
+          Solicitar o activar licencia
         </button>
+      </div>
 
-        {/* Botón contactar — con estados */}
-        {contactStatus === 'idle' && (
-          <button
-            onClick={handleContact}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-3 px-6 rounded-xl transition-colors block text-center"
-          >
-            Contactar para obtener una licencia
-          </button>
-        )}
+      {showRequest && (
+        <RequestLicenseModal onClose={() => setShowRequest(false)} />
+      )}
+    </div>
+  );
+}
 
-        {contactStatus === 'loading' && (
-          <div className="w-full bg-gray-100 text-gray-400 font-medium py-3 px-6 rounded-xl text-center">
-            ⏳ Enviando solicitud...
+// ── 3. MODAL 1 — SOLICITAR LICENCIA ─────────────────────────
+
+function RequestLicenseModal({ onClose }: { onClose: () => void }) {
+  const { license } = useLicense();
+  const deviceId =
+    license.deviceId ?? localStorage.getItem('fh_device_id') ?? 'No disponible';
+
+  const [copied, setCopied] = useState(false);
+  const [sendStatus, setSendStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
+  const [showActivation, setShowActivation] = useState(false);
+
+  // Copiar Device ID al portapapeles
+  const handleCopy = () => {
+    navigator.clipboard.writeText(deviceId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  // ── Enviar solicitud al administrador por email (Web3Forms) ──
+  const handleSend = async () => {
+    setSendStatus('loading');
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_key: '10837e48-e398-49d2-bf7d-7bd8d37cc5da',
+          subject: 'Solicitud de licencia — Finance Hub',
+          to_email: 'jarnaiz.martin@gmail.com',
+          message: `SOLICITUD DE LICENCIA\n\nDevice ID: ${deviceId}`,
+        }),
+      });
+      if (response.ok) {
+        setSendStatus('success');
+      } else {
+        setSendStatus('error');
+      }
+    } catch (err) {
+      console.error('[Web3Forms]', err);
+      setSendStatus('error');
+    }
+  };
+
+  // Si el usuario quiere activar, mostramos Modal 2
+  if (showActivation) {
+    return (
+      <ActivationModal
+        onClose={onClose}
+        onBack={() => setShowActivation(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        {/* Cabecera */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-blue-100 rounded-full p-2">
+            <Shield size={24} className="text-blue-600" />
           </div>
-        )}
-
-        {contactStatus === 'success' && (
-          <div className="w-full bg-green-50 border border-green-200 text-green-700 font-medium py-3 px-6 rounded-xl text-center flex items-center justify-center gap-2">
-            <CheckCircle size={16} />
-            ¡Solicitud enviada! El administrador se pondrá en contacto contigo.
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg">
+              Solicitar licencia
+            </h3>
+            <p className="text-gray-500 text-sm">
+              Envía tu Device ID al administrador para recibir tu código
+            </p>
           </div>
-        )}
+        </div>
 
-        {contactStatus === 'error' && (
-          <div className="flex flex-col gap-2">
-            <div className="w-full bg-red-50 border border-red-200 text-red-600 font-medium py-3 px-6 rounded-xl text-center">
-              ⚠️ Error al enviar. Inténtalo de nuevo.
-            </div>
+        {/* Explicación */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 text-sm text-blue-700">
+          <p className="font-semibold mb-1">ℹ️ ¿Cómo funciona?</p>
+          <ol className="list-decimal list-inside space-y-1 text-blue-600">
+            <li>Copia tu Device ID o envíalo automáticamente</li>
+            <li>El administrador generará tu código de licencia</li>
+            <li>Cuando lo recibas, pulsa "Activar licencia"</li>
+          </ol>
+        </div>
+
+        {/* Device ID */}
+        <div className="mb-5">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            Tu Device ID
+          </p>
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+            <code className="flex-1 text-sm font-mono text-gray-700 break-all">
+              {deviceId}
+            </code>
             <button
-              onClick={() => setContactStatus('idle')}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2 px-6 rounded-xl transition-colors text-sm"
+              onClick={handleCopy}
+              title="Copiar al portapapeles"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-100 transition-colors text-xs font-bold text-gray-600 shrink-0"
             >
-              Reintentar
+              {copied ? (
+                <>
+                  <Check size={13} className="text-green-500" /> Copiado
+                </>
+              ) : (
+                <>
+                  <Copy size={13} /> Copiar
+                </>
+              )}
             </button>
           </div>
-        )}
+        </div>
 
+        {/* Botón enviar solicitud */}
+        <div className="mb-2">
+          {sendStatus === 'idle' && (
+            <button
+              onClick={handleSend}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors"
+            >
+              📧 Enviar solicitud al administrador
+            </button>
+          )}
+          {sendStatus === 'loading' && (
+            <div className="w-full bg-gray-100 text-gray-400 font-medium py-3 px-6 rounded-xl text-center">
+              ⏳ Enviando solicitud...
+            </div>
+          )}
+          {sendStatus === 'success' && (
+            <div className="flex flex-col gap-2">
+              <div className="w-full bg-green-50 border border-green-200 text-green-700 font-medium py-3 px-6 rounded-xl text-center flex items-center justify-center gap-2">
+                <CheckCircle size={16} />
+                ¡Solicitud enviada! El administrador se pondrá en contacto
+                contigo.
+              </div>
+              <button
+                onClick={() => setSendStatus('idle')}
+                className="w-full text-sm text-gray-400 hover:text-gray-600 py-1 transition-colors"
+              >
+                Volver a enviar
+              </button>
+            </div>
+          )}
+          {sendStatus === 'error' && (
+            <div className="flex flex-col gap-2">
+              <div className="w-full bg-red-50 border border-red-200 text-red-600 font-medium py-3 px-6 rounded-xl text-center">
+                ⚠️ Error al enviar. Inténtalo de nuevo.
+              </div>
+              <button
+                onClick={() => setSendStatus('idle')}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2 px-6 rounded-xl transition-colors text-sm"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Separador */}
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400 font-medium">
+            ¿Ya tienes un código?
+          </span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* Botón activar licencia */}
+        <button
+          onClick={() => setShowActivation(true)}
+          className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mb-3"
+        >
+          <Key size={16} />
+          Activar licencia
+        </button>
+
+        {/* Cancelar */}
+        <button
+          onClick={onClose}
+          className="w-full text-sm text-gray-400 hover:text-gray-600 py-1 transition-colors"
+        >
+          Cerrar
+        </button>
       </div>
     </div>
   );
 }
 
+// ── 4. MODAL 2 — ACTIVAR LICENCIA ───────────────────────────
 
-// ── 3. MODAL DE ACTIVACIÓN ───────────────────────────────────
-// Se abre desde el banner o desde la pantalla de expiración
-
-export function ActivationModal({ onClose }: { onClose: () => void }) {
+export function ActivationModal({
+  onClose,
+  onBack,
+}: {
+  onClose: () => void;
+  onBack?: () => void;
+}) {
   const { activate } = useLicense();
   const [code, setCode] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
   const [message, setMessage] = useState('');
 
   const handleActivate = async () => {
     if (!code.trim()) return;
     setStatus('loading');
-  
-    // Extraemos la fecha de caducidad del código del Admin
+
     const storedCodes = localStorage.getItem('fh_admin_codes');
     const codes = storedCodes ? JSON.parse(storedCodes) : [];
-    const match = codes.find((c: any) => 
-      c.code.trim().toUpperCase() === code.trim().toUpperCase()
+    const match = codes.find(
+      (c: any) => c.code.trim().toUpperCase() === code.trim().toUpperCase()
     );
-  
+
     if (!match) {
       setStatus('error');
       setMessage('Código de licencia no válido.');
       return;
     }
-  
+
     const result = await activate(code, match.expiryDate);
-  
+
     if (result.success) {
       setStatus('success');
       setMessage(result.message);
@@ -222,15 +363,18 @@ export function ActivationModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-
         {/* Cabecera */}
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-blue-100 rounded-full p-2">
-            <Shield size={24} className="text-blue-600" />
+            <Key size={24} className="text-blue-600" />
           </div>
           <div>
-            <h3 className="font-bold text-gray-800 text-lg">Activar licencia</h3>
-            <p className="text-gray-500 text-sm">Introduce tu código de licencia</p>
+            <h3 className="font-bold text-gray-800 text-lg">
+              Activar licencia
+            </h3>
+            <p className="text-gray-500 text-sm">
+              Introduce tu código de licencia
+            </p>
           </div>
         </div>
 
@@ -238,7 +382,7 @@ export function ActivationModal({ onClose }: { onClose: () => void }) {
         <input
           type="text"
           value={code}
-          onChange={e => setCode(e.target.value.toUpperCase())}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="FH-XXXX-XXXX-XXXX"
           className="w-full border border-gray-300 rounded-xl px-4 py-3 text-center font-mono text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
           disabled={status === 'loading' || status === 'success'}
@@ -253,25 +397,40 @@ export function ActivationModal({ onClose }: { onClose: () => void }) {
                 : 'bg-red-50 text-red-700'
             }`}
           >
-            {status === 'success'
-              ? <CheckCircle size={16} />
-              : <AlertTriangle size={16} />}
+            {status === 'success' ? (
+              <CheckCircle size={16} />
+            ) : (
+              <AlertTriangle size={16} />
+            )}
             {message}
           </div>
         )}
 
         {/* Botones */}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-3 rounded-xl transition-colors"
-            disabled={status === 'loading'}
-          >
-            Cancelar
-          </button>
+        <div className="flex gap-3 mb-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-3 rounded-xl transition-colors"
+              disabled={status === 'loading'}
+            >
+              ← Volver
+            </button>
+          )}
+          {!onBack && (
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-3 rounded-xl transition-colors"
+              disabled={status === 'loading'}
+            >
+              Cancelar
+            </button>
+          )}
           <button
             onClick={handleActivate}
-            disabled={!code.trim() || status === 'loading' || status === 'success'}
+            disabled={
+              !code.trim() || status === 'loading' || status === 'success'
+            }
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 rounded-xl transition-colors"
           >
             {status === 'loading' ? 'Validando...' : 'Activar'}
