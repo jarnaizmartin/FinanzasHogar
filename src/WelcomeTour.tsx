@@ -74,7 +74,10 @@ const TOUR_CARDS: TourCard[] = [
     accentColor: '#34d399',
     features: [
       { icon: '🏦', text: 'Múltiples cuentas en diferentes divisas' },
-      { icon: '📅', text: 'Saldo base con fecha — tú controlas el punto de partida' },
+      {
+        icon: '📅',
+        text: 'Saldo base con fecha — tú controlas el punto de partida',
+      },
       { icon: '⚡', text: 'Saldo real calculado automáticamente' },
       { icon: '⚠️', text: 'Alertas de saldo mínimo configurable' },
     ],
@@ -150,9 +153,15 @@ const TOUR_CARDS: TourCard[] = [
     accentColor: '#fbbf24',
     features: [
       { icon: '✍️', text: 'Modo manual — tú controlas el progreso' },
-      { icon: '⚡', text: 'Modo automático — vinculado a tus movimientos reales' },
+      {
+        icon: '⚡',
+        text: 'Modo automático — vinculado a tus movimientos reales',
+      },
       { icon: '📊', text: 'Ritmo actual y predicción de fecha de llegada' },
-      { icon: '🎉', text: 'Alertas cuando un objetivo está en peligro o completado' },
+      {
+        icon: '🎉',
+        text: 'Alertas cuando un objetivo está en peligro o completado',
+      },
     ],
   },
   {
@@ -338,7 +347,7 @@ export function WelcomeTour({
       setDirection(dir);
       setTimeout(() => {
         setCurrentIndex(newIndex);
-        setKey(k => k + 1);
+        setKey((k) => k + 1);
         setAnimating(false);
       }, 300);
     },
@@ -361,13 +370,29 @@ export function WelcomeTour({
   if (showChecklist) {
     const checklistSteps = [
       { emoji: '🏦', title: 'Crea tu primera cuenta', time: '~2 min' },
-      { emoji: '🏷️', title: 'Revisa y personaliza tus categorías', time: '~3 min' },
+      {
+        emoji: '🏷️',
+        title: 'Revisa y personaliza tus categorías',
+        time: '~3 min',
+      },
       { emoji: '📈', title: 'Define tus proyecciones', time: '~5 min' },
-      { emoji: '🧾', title: 'Registra tus primeros movimientos', time: '~5 min' },
+      {
+        emoji: '🧾',
+        title: 'Registra tus primeros movimientos',
+        time: '~5 min',
+      },
       { emoji: '🎯', title: 'Crea un objetivo de ahorro', time: '~3 min' },
       { emoji: '🔐', title: 'Activa la seguridad', time: '~3 min' },
-      { emoji: '💾', title: 'Haz tu primera copia de seguridad', time: '~2 min' },
-      { emoji: '📊', title: 'Explora el Resumen y la Previsión', time: '~2 min' },
+      {
+        emoji: '💾',
+        title: 'Haz tu primera copia de seguridad',
+        time: '~2 min',
+      },
+      {
+        emoji: '📊',
+        title: 'Explora el Resumen y la Previsión',
+        time: '~2 min',
+      },
     ];
 
     return (
@@ -376,7 +401,8 @@ export function WelcomeTour({
           position: 'fixed',
           inset: 0,
           zIndex: 9999,
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #1e40af 100%)',
+          background:
+            'linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #1e40af 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -437,8 +463,8 @@ export function WelcomeTour({
                 lineHeight: 1.5,
               }}
             >
-              Ahora te sugerimos seguir estos pasos en orden
-              para empezar con buen pie.
+              Ahora te sugerimos seguir estos pasos en orden para empezar con
+              buen pie.
             </p>
 
             {/* Tiempo total */}
@@ -453,7 +479,13 @@ export function WelcomeTour({
                 border: '1px solid rgba(255,255,255,0.15)',
               }}
             >
-              <span style={{ fontSize: '0.75rem', color: '#93c5fd', fontWeight: 700 }}>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#93c5fd',
+                  fontWeight: 700,
+                }}
+              >
                 ⏱️ Tiempo total estimado: ~25 min
               </span>
             </div>
@@ -461,7 +493,13 @@ export function WelcomeTour({
 
           {/* Lista de pasos */}
           <div style={{ padding: '1.25rem 1.5rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
               {checklistSteps.map((step, i) => (
                 <div
                   key={i}
@@ -543,7 +581,9 @@ export function WelcomeTour({
             >
               💡 Encontrarás la guía detallada de cada paso en el icono{' '}
               <strong style={{ color: '#60a5fa' }}>❓</strong> del header →{' '}
-              <strong style={{ color: '#60a5fa' }}>Guía de primeros pasos</strong>
+              <strong style={{ color: '#60a5fa' }}>
+                Guía de primeros pasos
+              </strong>
             </div>
           </div>
 
@@ -566,12 +606,12 @@ export function WelcomeTour({
                 animation: 'tourGlow 2s ease-in-out infinite',
                 transition: 'transform 0.2s, box-shadow 0.2s',
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.02)';
                 e.currentTarget.style.boxShadow =
                   '0 12px 32px rgba(59,130,246,0.6)';
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
                 e.currentTarget.style.boxShadow =
                   '0 8px 24px rgba(59,130,246,0.4)';
@@ -584,7 +624,7 @@ export function WelcomeTour({
       </div>
     );
   }
-  
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
@@ -597,9 +637,11 @@ export function WelcomeTour({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         padding: '1.5rem',
-        overflow: 'hidden',
+        paddingTop: '5rem',
+        overflowY: 'auto',
+        overflowX: 'hidden', 
       }}
     >
       {/* ── Partículas de fondo ── */}
@@ -691,11 +733,11 @@ export function WelcomeTour({
                 backdropFilter: 'blur(8px)',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
                 e.currentTarget.style.color = '#ffffff';
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
                 e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
               }}
@@ -748,9 +790,9 @@ export function WelcomeTour({
         {/* Emoji flotante */}
         <div
           style={{
-            fontSize: '5rem',
+            fontSize: 'clamp(3rem, 10vw, 5rem)',
             lineHeight: 1,
-            animation: 'tourFloat 3s ease-in-out infinite',
+            animation: 'tourFloat 3s ease-in-out infinite', 
             filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))',
           }}
         >
@@ -806,9 +848,9 @@ export function WelcomeTour({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 22rem), 1fr))',
             gap: '1.25rem',
-            width: '100%',
+            width: '100%',  
           }}
         >
           {/* Descripción */}
@@ -960,11 +1002,11 @@ export function WelcomeTour({
               justifyContent: 'center',
               flexShrink: 0,
             }}
-            onMouseEnter={e => {
+            onMouseEnter={(e) => {
               if (currentIndex > 0)
                 e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
             }}
-            onMouseLeave={e => {
+            onMouseLeave={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
             }}
           >
@@ -990,9 +1032,7 @@ export function WelcomeTour({
                   transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
                   padding: 0,
                   boxShadow:
-                    i === currentIndex
-                      ? `0 0 8px ${card.accentColor}`
-                      : 'none',
+                    i === currentIndex ? `0 0 8px ${card.accentColor}` : 'none',
                 }}
               />
             ))}
@@ -1021,33 +1061,25 @@ export function WelcomeTour({
               gap: '0.5rem',
               flexShrink: 0,
             }}
-            onMouseEnter={e => {
+            onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'scale(1.05)';
               e.currentTarget.style.boxShadow = `0 12px 32px ${card.accentColor}77`;
             }}
-            onMouseLeave={e => {
+            onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
               e.currentTarget.style.boxShadow = `0 8px 24px ${card.accentColor}55`;
             }}
           >
-            {isLast ? (
-              <>
-                🚀 ¡Empezar ahora!
-              </>
-            ) : (
-              <>
-                Siguiente →
-              </>
-            )}
+            {isLast ? <>🚀 ¡Empezar ahora!</> : <>Siguiente →</>}
           </button>
         </div>
 
-        {/* Hint teclado */}
+        {/* Hint teclado — solo en desktop */}
         <div
           style={{
             fontSize: '0.68rem',
             color: 'rgba(255,255,255,0.25)',
-            display: 'flex',
+            display: window.innerWidth < 640 ? 'none' : 'flex',
             gap: '0.75rem',
             alignItems: 'center',
           }}
@@ -1087,7 +1119,7 @@ function BackgroundParticles({ color }: { color: string }) {
         pointerEvents: 'none',
       }}
     >
-      {particles.map(p => (
+      {particles.map((p) => (
         <div
           key={p.id}
           style={{
@@ -1151,7 +1183,7 @@ function Sparkles() {
         overflow: 'hidden',
       }}
     >
-      {sparkles.map(s => (
+      {sparkles.map((s) => (
         <div
           key={s.id}
           style={{

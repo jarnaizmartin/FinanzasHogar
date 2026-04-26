@@ -13,6 +13,8 @@ import {
   Line,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   ComposedChart,
   PieChart,
   Pie,
@@ -1694,6 +1696,15 @@ const FREQUENCIES = [
   { value: 'biannual', label: 'Semestral', months: 6 },
   { value: 'annual', label: 'Anual', months: 12 },
 ];
+
+// ─── Formatos de fecha ────────────────────────────────────────────────────────
+const DATE_FORMATS = [
+  { value: 'dd/mm/yyyy', label: 'DD/MM/YYYY', example: '31/01/2025' },
+  { value: 'mm/dd/yyyy', label: 'MM/DD/YYYY', example: '01/31/2025' },
+  { value: 'yyyy-mm-dd', label: 'YYYY-MM-DD', example: '2025-01-31' },
+  { value: 'dd-mm-yyyy', label: 'DD-MM-YYYY', example: '31-01-2025' },
+];
+
 const DEFAULT_CATEGORIES = [
   { name: 'Salario', type: 'income', color: '#16a34a' },
   { name: 'Freelance / Consultoría', type: 'income', color: '#0891b2' },
@@ -2061,21 +2072,55 @@ const monthLabel = (key) => {
   });
 };
 
-const fmtDateShort = (dateStr) => {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
-const fmtDateDMY = (dateStr: string): string => {
+function fmtDateShort(dateStr: string, dateFormat): string {
   if (!dateStr) return '—';
   const [y, m, d] = dateStr.split('-');
-  return `${d}-${m}-${y}`;
-};
+  if (!y || !m || !d) return '—';
+
+  const months = [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+  ];
+  const monthShort = months[parseInt(m, 10) - 1] ?? m;
+
+  switch (dateFormat) {
+    case 'mm/dd/yyyy':
+      return `${m}/${d}/${y}`;
+    case 'yyyy-mm-dd':
+      return `${y}-${m}-${d}`;
+    case 'dd-mm-yyyy':
+      return `${d}-${m}-${y}`;
+    default:
+      return `${parseInt(d, 10)} ${monthShort} ${y}`;
+  }
+}
+
+function fmtDateDMY(dateStr: string, dateFormat): string {
+  if (!dateStr) return '—';
+  const [y, m, d] = dateStr.split('-');
+  if (!y || !m || !d) return '—';
+
+  switch (dateFormat) {
+    case 'mm/dd/yyyy':
+      return `${m}/${d}/${y}`;
+    case 'yyyy-mm-dd':
+      return `${y}-${m}-${d}`;
+    case 'dd-mm-yyyy':
+      return `${d}-${m}-${y}`;
+    default:
+      return `${d}/${m}/${y}`;
+  }
+}
 
 const syncEndDateDay = (startDate, endDate) => {
   if (!endDate || !startDate) return endDate;
@@ -2694,6 +2739,11 @@ function AppProvider({ children }) {
     false
   );
 
+  const [firstSessionDone, setFirstSessionDone] = useLocalStorage<boolean>(
+    'fh_first_session_done',
+    false
+  );
+
   const [lastAutoBackupSession, setLastAutoBackupSession] =
     useLocalStorage<number>('fh_last_auto_backup_session', 0);
 
@@ -2726,6 +2776,11 @@ function AppProvider({ children }) {
   const [displayCurrency, setDisplayCurrency] = useLocalStorage(
     'fh_currency',
     'EUR'
+  );
+
+  const [dateFormat, setDateFormat] = useLocalStorage(
+    'fh_date_format',
+    'dd/mm/yyyy'
   );
 
   // ── Tipos de cambio ────────────────────────────────────────────────────────
@@ -3001,7 +3056,8 @@ function AppProvider({ children }) {
             severity: 'critical',
             title: `${goal.emoji} "${goal.name}" ha vencido`,
             message: `El plazo terminó el ${fmtDateShort(
-              goal.deadline
+              goal.deadline,
+              dateFormat
             )} con un ${Math.round(
               pct
             )}% completado. Considera actualizar la fecha o el importe objetivo.`,
@@ -3440,13 +3496,21 @@ function AppProvider({ children }) {
     }
   }, [onboarded]);
 
-  // ── Backup automático al arrancar ─────────────────────────────────────────
+  // ── Backup automático al arrancar ─────────────────────────
   useEffect(() => {
     // Solo si el usuario ya ha completado el onboarding
     if (!onboarded) return;
 
     // Solo si tiene datos que respaldar
     if (accounts.length === 0) return;
+
+    // ── Si es la primera sesión con datos, solo marcamos
+    // que ya pasó — sin backup ni banner ──────────────────────
+    if (!firstSessionDone) {
+      setFirstSessionDone(true);
+      setAutoBackupDone(false);
+      return;
+    }
 
     const lastBackup = backupHistory[0]?.timestamp ?? 0;
     const daysSinceBackup =
@@ -3458,7 +3522,7 @@ function AppProvider({ children }) {
     const backupIsOld =
       daysSinceBackup !== null && daysSinceBackup >= backupReminderDays;
 
-    // ¿Ya hemos hecho el backup automático en esta sesión? (ventana de 1 hora)
+    // ¿Ya hemos hecho el backup automático en esta sesión?
     const alreadyDoneThisSession =
       Date.now() - lastAutoBackupSession < 1000 * 60 * 60;
 
@@ -3473,7 +3537,7 @@ function AppProvider({ children }) {
     } else {
       setAutoBackupDone(false);
     }
-  }, [onboarded, accounts.length]);
+  }, [onboarded, accounts.length, firstSessionDone]);
 
   // ── Valor del contexto ─────────────────────────────────────────────────────
   const value = {
@@ -3481,6 +3545,10 @@ function AppProvider({ children }) {
     onboarded,
     setOnboarded,
     resetApp,
+    firstSessionDone,
+    setFirstSessionDone,
+    dateFormat,
+    setDateFormat,
 
     // Tour
     tourCompleted,
@@ -7575,6 +7643,7 @@ function WarnBanner({ warnAccounts, T }) {
 function Onboarding({ onFinish }) {
   const [step, setStep] = useState(0);
   const [selectedCurrency, setSelectedCurrency] = useState('EUR');
+  const [selectedDateFormat, setSelectedDateFormat] = useState('dd/mm/yyyy');
   const [accountName, setAccountName] = useState('');
   const [accountBalance, setAccountBalance] = useState('');
   const [incomeName, setIncomeName] = useState('');
@@ -7847,6 +7916,108 @@ function Onboarding({ onFinish }) {
                   ))}
                 </select>
 
+                {/* ── Confirmación divisa seleccionada ── */}
+                {(() => {
+                  const selected = CURRENCIES.find(
+                    (c) => c.code === selectedCurrency
+                  );
+                  return selected ? (
+                    <div
+                      style={{
+                        marginTop: '0.625rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.78rem',
+                        color: '#60a5fa',
+                      }}
+                    >
+                      <Check size={13} color="#60a5fa" />
+                      <span>{selected.name} seleccionada</span>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* ── Selector de formato de fecha ── */}
+                <div style={{ marginTop: '1.5rem' }}>
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: '#93c5fd',
+                      marginBottom: '0.375rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    ¿Cómo prefieres ver las fechas?
+                  </div>
+                  <p
+                    style={{
+                      fontSize: '0.75rem',
+                      color: '#cbd5e1',
+                      textAlign: 'center',
+                      margin: '0 0 0.875rem',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Elige el formato que uses habitualmente en tu país.
+                  </p>
+
+                  <select
+                    value={selectedDateFormat}
+                    onChange={(e) => setSelectedDateFormat(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '0.875rem',
+                      border: '2px solid #3b82f6',
+                      background: 'rgba(255,255,255,0.07)',
+                      color: '#ffffff',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      outline: 'none',
+                      appearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2393c5fd' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 1rem center',
+                      paddingRight: '2.5rem',
+                    }}
+                  >
+                    {DATE_FORMATS.map((f) => (
+                      <option
+                        key={f.value}
+                        value={f.value}
+                        style={{ background: '#1e3a5f', color: '#ffffff' }}
+                      >
+                        {f.label} — ej: {f.example}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div
+                    style={{
+                      marginTop: '0.625rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.78rem',
+                      color: '#60a5fa',
+                    }}
+                  >
+                    <Check size={13} color="#60a5fa" />
+                    <span>
+                      Las fechas se mostrarán como:{' '}
+                      {DATE_FORMATS.find((f) => f.value === selectedDateFormat)
+                        ?.example ?? ''}
+                    </span>
+                  </div>
+                </div>
+
                 {(() => {
                   const selected = CURRENCIES.find(
                     (c) => c.code === selectedCurrency
@@ -8018,6 +8189,7 @@ function Onboarding({ onFinish }) {
                   categories: cats,
                   projections: [],
                   baseCurrency: selectedCurrency,
+                  dateFormat: selectedDateFormat,
                 });
               }}
               disabled={!legalAccepted}
@@ -9116,6 +9288,8 @@ function AppShell() {
     setBaseCurrency,
     displayCurrency,
     setDisplayCurrency,
+    dateFormat,
+    setDateFormat,
     showCurrency,
     setShowCurrency,
     ratesOutdated,
@@ -9279,6 +9453,7 @@ function AppShell() {
     realExpenses,
     categoryRules,
     baseCurrency: selectedBase,
+    dateFormat: selectedDateFmt,
   }) => {
     setAccounts(accounts);
     setCategories(categories);
@@ -9288,6 +9463,9 @@ function AppShell() {
     if (selectedBase) {
       setBaseCurrency(selectedBase);
       setDisplayCurrency(selectedBase);
+    }
+    if (selectedDateFmt) {
+      setDateFormat(selectedDateFmt);
     }
     setOnboarded(true);
   };
@@ -9824,6 +10002,37 @@ function AppShell() {
               Todos los importes se mostrarán convertidos a esta moneda.
             </p>
           </Field>
+          <div
+            style={{
+              height: '1px',
+              background: T.cardBorder,
+              margin: '0.25rem 0 1.25rem',
+            }}
+          />
+          <Field label="📅 Formato de fecha">
+            <Sel
+              T={T}
+              value={dateFormat}
+              onChange={(e) => setDateFormat(e.target.value)}
+            >
+              {DATE_FORMATS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label} — ej: {f.example}
+                </option>
+              ))}
+            </Sel>
+            <p
+              style={{
+                fontSize: '0.72rem',
+                color: T.muted,
+                marginTop: '0.5rem',
+                lineHeight: 1.5,
+              }}
+            >
+              Elige cómo se muestran las fechas en toda la aplicación.
+            </p>
+          </Field>
+
           <button
             onClick={() => setShowFullRates(true)}
             style={{
@@ -11662,6 +11871,7 @@ function Dashboard() {
     accountWarnings,
     realBalanceMap,
     stats,
+    dateFormat,
   } = useApp();
   const { totalBalance, totalRealBalance, thisMonth, warnAccounts } = stats;
 
@@ -11945,7 +12155,7 @@ function Dashboard() {
                       >
                         Base{' '}
                         {fmtAccount(acc.balance, acc.currency ?? baseCurrency)}{' '}
-                        · al {fmtDateDMY(acc.date)}
+                        · al {fmtDateDMY(acc.date, dateFormat)}
                       </div>
                     )}
 
@@ -11961,7 +12171,7 @@ function Dashboard() {
                       >
                         Base{' '}
                         {fmtAccount(acc.balance, acc.currency ?? baseCurrency)}{' '}
-                        · al {fmtDateDMY(acc.date)}
+                        · al {fmtDateDMY(acc.date, dateFormat)}
                       </div>
                     )}
 
@@ -13422,6 +13632,7 @@ function Accounts() {
     setProjections,
     goals,
     setGoals,
+    dateFormat,
   } = useApp();
 
   const totalBase = accounts.reduce((s, a) => s + a.balance, 0);
@@ -13773,7 +13984,7 @@ function Accounts() {
                           marginTop: '0.1rem',
                         }}
                       >
-                        Al {fmtDateDMY(acc.date)}
+                        Al {fmtDateDMY(acc.date, dateFormat)}
                       </div>
                     </div>
                   </div>
@@ -13837,7 +14048,7 @@ function Accounts() {
                       <div style={{ fontSize: '0.75rem', color: T.muted }}>
                         Base:{' '}
                         {fmtAccount(acc.balance, acc.currency ?? baseCurrency)}{' '}
-                        · al {fmtDateDMY(acc.date)}
+                        · al {fmtDateDMY(acc.date, dateFormat)}
                       </div>
                     )}
                     {(realBalanceMap[acc.id]?.realBalance ?? acc.balance) ===
@@ -13845,7 +14056,7 @@ function Accounts() {
                       <div style={{ fontSize: '0.75rem', color: T.muted }}>
                         Base:{' '}
                         {fmtAccount(acc.balance, acc.currency ?? baseCurrency)}{' '}
-                        · al {fmtDateDMY(acc.date)}
+                        · al {fmtDateDMY(acc.date, dateFormat)}
                       </div>
                     )}
 
@@ -16334,6 +16545,7 @@ function RealExpenses() {
     setRealFilterDateFrom,
     realFilterDateTo,
     setRealFilterDateTo,
+    dateFormat,
   } = useApp();
 
   const toast = useToast();
@@ -17272,7 +17484,7 @@ function RealExpenses() {
                   </div>
                   <div style={{ fontSize: '0.775rem', color: T.muted }}>
                     {cat?.name ?? '—'} · {acc?.name ?? '—'} ·{' '}
-                    {fmtDateShort(expense.entryDate)}
+                    {fmtDateShort(expense.entryDate, dateFormat)}
                     {expense.notes?.includes('recurrente') && (
                       <span
                         style={{
@@ -17797,6 +18009,7 @@ function Goals() {
     displayCurrency,
     baseCurrency,
     rates,
+    dateFormat,
   } = useApp();
 
   const toast = useToast();
@@ -18079,7 +18292,8 @@ function Goals() {
             <div style={{ fontSize: '0.8rem', color: T.muted }}>
               Meta:{' '}
               {fmt(form.targetAmount, form.currency, form.currency, rates)}
-              {form.deadline && ` · Límite: ${fmtDateShort(form.deadline)}`}
+              {form.deadline &&
+                ` · Límite: ${fmtDateShort(form.deadline, dateFormat)}`}
             </div>
           </div>
           <div
@@ -18545,7 +18759,7 @@ function Goals() {
                 {
                   label: 'Fecha límite',
                   value: form.deadline
-                    ? fmtDateShort(form.deadline)
+                    ? fmtDateShort(form.deadline, dateFormat)
                     : 'Sin límite',
                 },
                 ...(form.mode === 'auto'
@@ -22378,6 +22592,7 @@ function BankImportModal({ onClose }: { onClose: () => void }) {
     setBankFormats,
     categoryRules,
     setCategoryRules,
+    dateFormat,
   } = useApp();
 
   const toast = useToast();
@@ -23855,7 +24070,7 @@ function BankImportModal({ onClose }: { onClose: () => void }) {
                         {row.description}
                       </div>
                       <div style={{ fontSize: '0.68rem', color: T.muted }}>
-                        {fmtDateDMY(row.valueDate)}
+                        {fmtDateDMY(row.valueDate, dateFormat)}
                       </div>
                     </div>
 
@@ -24042,7 +24257,7 @@ function BankImportModal({ onClose }: { onClose: () => void }) {
                     >
                       ⚠️ Posible duplicado en la app:{' '}
                       <strong>{dupRow.description}</strong> ·{' '}
-                      {fmtDateDMY(dupRow.valueDate)} ·{' '}
+                      {fmtDateDMY(dupRow.valueDate, dateFormat)} ·{' '}
                       {dupRow.amount.toLocaleString('es-ES', {
                         minimumFractionDigits: 2,
                       })}{' '}
@@ -24157,6 +24372,7 @@ function Reports() {
     displayCurrency,
     rates,
     realBalanceMap,
+    dateFormat,
   } = useApp();
 
   const now = new Date();
@@ -25350,7 +25566,7 @@ function Reports() {
                                 whiteSpace: 'nowrap' as const,
                               }}
                             >
-                              {fmtDateDMY(e.valueDate)}
+                              {fmtDateDMY(e.valueDate, dateFormat)}
                             </td>
                             <td
                               style={{
@@ -25631,7 +25847,7 @@ function Reports() {
                             whiteSpace: 'nowrap' as const,
                           }}
                         >
-                          {fmtDateDMY(acc.date)}
+                          {fmtDateDMY(acc.date, dateFormat)}
                         </td>
                         <td
                           style={{
@@ -25987,7 +26203,7 @@ function Reports() {
                             whiteSpace: 'nowrap' as const,
                           }}
                         >
-                          {fmtDateDMY(p.startDate)}
+                          {fmtDateDMY(p.startDate, dateFormat)}
                         </td>
                         <td
                           style={{
@@ -25997,7 +26213,9 @@ function Reports() {
                             whiteSpace: 'nowrap' as const,
                           }}
                         >
-                          {p.endDate ? fmtDateDMY(p.endDate) : 'Sin fin'}
+                          {p.endDate
+                            ? fmtDateDMY(p.endDate, dateFormat)
+                            : 'Sin fin'}
                         </td>
                       </tr>
                     );
@@ -26313,7 +26531,9 @@ function Reports() {
                             whiteSpace: 'nowrap' as const,
                           }}
                         >
-                          {g.deadline ? fmtDateDMY(g.deadline) : '—'}
+                          {g.deadline
+                            ? fmtDateDMY(g.deadline, dateFormat)
+                            : '—'}
                         </td>
                         <td
                           style={{

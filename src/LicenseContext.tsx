@@ -65,8 +65,9 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
   // ── Activar licencia ───────────────────────────────────────
 
-  const activate = async (code: string, expiryDate: number) => {
-    const result = await validateAndActivate(code, license, expiryDate);
+  const activate = async (code: string) => {
+    const result = await validateAndActivate(code, license);
+  
     if (result.success && result.newState) {
       setLicense(result.newState);
     }

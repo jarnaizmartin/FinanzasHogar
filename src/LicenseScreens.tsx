@@ -335,21 +335,11 @@ export function ActivationModal({
   const handleActivate = async () => {
     if (!code.trim()) return;
     setStatus('loading');
-
-    const storedCodes = localStorage.getItem('fh_admin_codes');
-    const codes = storedCodes ? JSON.parse(storedCodes) : [];
-    const match = codes.find(
-      (c: any) => c.code.trim().toUpperCase() === code.trim().toUpperCase()
-    );
-
-    if (!match) {
-      setStatus('error');
-      setMessage('Código de licencia no válido.');
-      return;
-    }
-
-    const result = await activate(code, match.expiryDate);
-
+  
+    // ✅ Ya no necesitamos buscar en localStorage
+    // El expiryDate está codificado dentro del propio código
+    const result = await activate(code);
+  
     if (result.success) {
       setStatus('success');
       setMessage(result.message);
@@ -359,6 +349,7 @@ export function ActivationModal({
       setMessage(result.message);
     }
   };
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
