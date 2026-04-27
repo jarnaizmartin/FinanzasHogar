@@ -817,15 +817,19 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
 
   // ── Estilos ──────────────────────────────────────────────────────────────
 
+  const isMobile = window.innerWidth < 640;
+
   const panelStyle: React.CSSProperties = {
     position: 'fixed',
-    top: 0,
+    top: isMobile ? 0 : 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    maxWidth: '34rem',
+    left: isMobile ? 0 : 'auto',
+    width: isMobile ? '100%' : '100%',
+    maxWidth: isMobile ? '100%' : '34rem',
     background: T.cardBg,
-    borderLeft: `1px solid ${T.cardBorder}`,
+    borderLeft: isMobile ? 'none' : `1px solid ${T.cardBorder}`,
+    borderTop: isMobile ? `1px solid ${T.cardBorder}` : 'none',
     boxShadow: '-8px 0 40px rgba(0,0,0,0.2)',
     zIndex: 60,
     display: 'flex',
@@ -834,7 +838,7 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
   };
 
   const headerStyle: React.CSSProperties = {
-    padding: '1.25rem 1.5rem',
+    padding: isMobile ? '1rem' : '1.25rem 1.5rem',
     borderBottom: `1px solid ${T.cardBorder}`,
     display: 'flex',
     alignItems: 'center',
@@ -847,7 +851,8 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
   const contentStyle: React.CSSProperties = {
     flex: 1,
     overflowY: 'auto',
-    padding: '1.25rem 1.5rem',
+    padding: isMobile ? '1rem' : '1.25rem 1.5rem',
+    paddingBottom: isMobile ? '5rem' : '1.25rem',
   };
 
   const navBtnStyle = (active: boolean): React.CSSProperties => ({
