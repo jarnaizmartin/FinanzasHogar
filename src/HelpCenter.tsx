@@ -817,16 +817,17 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
 
   // ── Estilos ──────────────────────────────────────────────────────────────
 
-  const isMobile = window.innerWidth < 640;
+  const isMobile = window.innerWidth < 768;
 
   const panelStyle: React.CSSProperties = {
     position: 'fixed',
-    top: isMobile ? 0 : 0,
-    right: 0,
+    top: isMobile && navigatedAway ? 'auto' : 0,
     bottom: 0,
-    left: isMobile ? 0 : 'auto',
-    width: isMobile ? '100%' : '100%',
+    right: 0,
+    left: isMobile && navigatedAway ? 0 : 'auto',
+    width: '100%',
     maxWidth: isMobile ? '100%' : '34rem',
+    height: isMobile && navigatedAway ? '45vh' : undefined,
     background: T.cardBg,
     borderLeft: isMobile ? 'none' : `1px solid ${T.cardBorder}`,
     borderTop: isMobile ? `1px solid ${T.cardBorder}` : 'none',

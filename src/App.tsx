@@ -9911,7 +9911,8 @@ function AppShell() {
           margin: '0 auto',
           padding: '2.5rem 2rem',
           transition: 'padding-right 0.3s ease',
-          paddingRight: showHelp && helpNavigatedAway ? '36rem' : '2rem',
+          paddingRight: showHelp && helpNavigatedAway && window.innerWidth >= 768 ? '36rem' : '2rem',
+          paddingBottom: showHelp && helpNavigatedAway && window.innerWidth < 768 ? '48vh' : undefined,
         }}
       >
         <TrialBanner />
@@ -13674,7 +13675,7 @@ function Accounts() {
     const entry = {
       ...form,
       balance: +form.balance,
-      minBalance: +(form.minBalance || 0),
+      minBalance: form.minBalance === '' ? 0 : +(form.minBalance || 0),
     };
 
     if (modal === 'add') {
@@ -14422,7 +14423,7 @@ function Accounts() {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  minBalance: parseFloat(e.target.value) || 0,
+                  minBalance: e.target.value === '' ? '' : parseFloat(e.target.value) || 0,
                 })
               }
             />
