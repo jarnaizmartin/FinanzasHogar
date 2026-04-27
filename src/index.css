@@ -1,3 +1,78 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+* {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+nav {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+
+  /* ── Tipografía general más compacta ── */
+  body {
+    font-size: 14px;
+  }
+
+  /* ── Header más compacto ── */
+  header nav button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* ── Main con menos padding ── */
+  main {
+    padding: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  /* ── Cards más compactas ── */
+  h2 {
+    font-size: 1.5rem !important;
+  }
+
+  /* ── Tablas con scroll horizontal natural ── */
+  table {
+    font-size: 0.75rem !important;
+  }
+
+  /* ── Grids de 2 columnas pasan a 1 en móvil ── */
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*="gridTemplateColumns: 'repeat(2"],
+  div[style*="gridTemplateColumns: 'repeat(3"],
+  div[style*="gridTemplateColumns: 'repeat(4"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Botones del header más pequeños ── */
+  .fh-btn {
+    width: 1.875rem !important;
+    height: 1.875rem !important;
+  }
+
+  /* ── Formularios más compactos ── */
+  input, select, textarea {
+    font-size: 16px !important; /* evita zoom automático en iOS */
+  }
+}
