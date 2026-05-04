@@ -4,6 +4,7 @@
 // ============================================================
 
 import { useState } from 'react';
+import { useApp } from './AppContext';
 
 // ─── Tipos ───────────────────────────────────────────────────
 
@@ -22,9 +23,9 @@ interface Step {
   actionCallback?: 'security' | 'backup';
 }
 
-// ─── Pasos de la guía ─────────────────────────────────────────
+// ─── Pasos esenciales (alineados con Dashboard) ───────────────
 
-const STEPS: Step[] = [
+const ESSENTIAL_STEPS: Step[] = [
   {
     id: 'accounts',
     emoji: '🏦',
@@ -48,24 +49,24 @@ const STEPS: Step[] = [
     actionTab: 'accounts',
   },
   {
-    id: 'categories',
-    emoji: '🏷️',
-    title: 'Revisa y personaliza tus categorías',
-    timeEstimate: '~3 min',
-    color: '#0d9488',
+    id: 'real',
+    emoji: '🧾',
+    title: 'Registra tus primeros movimientos',
+    timeEstimate: '~5 min',
+    color: '#dc2626',
     description:
-      'Las categorías organizan tus ingresos y gastos. La app incluye las más habituales (Salario, Alquiler, Alimentación, Transporte...) pero puedes añadir las tuyas propias. Es importante tenerlas listas antes de crear proyecciones y movimientos.',
-    tip: 'Accede a las Categorías desde el icono de etiqueta 🏷️ en el header superior derecho. Puedes crear categorías de tipo "Ingreso" o "Gasto" con un color identificativo.',
+      'Los movimientos reales son lo que realmente ha ocurrido: la compra del supermercado, el recibo de la luz, tu nómina recibida. Puedes introducirlos manualmente uno a uno, o importar directamente el extracto CSV de tu banco.',
+    tip: 'La importación CSV es la forma más rápida. Descarga el extracto de tu banca online, pulsa "🏦 Importar CSV", selecciona tu banco y la app categoriza los movimientos automáticamente. Soporta Santander, BBVA, CaixaBank, ING, Revolut y Bankinter.',
     tipType: 'info',
     substeps: [
-      'Haz clic en el icono 🏷️ del header para abrir Categorías',
-      'Revisa las categorías de ingreso y gasto ya creadas',
-      'Elimina las que no vayas a usar',
-      'Añade las categorías que te falten para tu situación',
-      'Asigna colores para identificarlas visualmente',
+      'Ve a la pestaña "Gastos Reales"',
+      'Opción A: Pulsa "🏦 Importar CSV" y sigue los pasos del importador',
+      'Opción B: Pulsa "+ Nuevo movimiento" para añadir movimientos manualmente',
+      'Asegúrate de asignar la categoría correcta a cada movimiento',
+      'Revisa el Dashboard para ver el efecto en tu saldo real',
     ],
-    actionLabel: 'Ir a Categorías',
-    actionTab: 'categories',
+    actionLabel: 'Ir a Gastos Reales',
+    actionTab: 'real',
   },
   {
     id: 'projections',
@@ -89,26 +90,6 @@ const STEPS: Step[] = [
     actionTab: 'projections',
   },
   {
-    id: 'real',
-    emoji: '🧾',
-    title: 'Registra tus primeros movimientos',
-    timeEstimate: '~5 min',
-    color: '#dc2626',
-    description:
-      'Los movimientos reales son lo que realmente ha ocurrido: la compra del supermercado, el recibo de la luz, tu nómina recibida. Puedes introducirlos manualmente uno a uno, o importar directamente el extracto CSV de tu banco.',
-    tip: 'La importación CSV es la forma más rápida. Descarga el extracto de tu banca online, pulsa "🏦 Importar CSV", selecciona tu banco y la app categoriza los movimientos automáticamente. Soporta Santander, BBVA, CaixaBank, ING, Revolut y Bankinter.',
-    tipType: 'info',
-    substeps: [
-      'Ve a la pestaña "Gastos Reales"',
-      'Opción A: Pulsa "🏦 Importar CSV" y sigue los pasos del importador',
-      'Opción B: Pulsa "+ Nuevo movimiento" para añadir movimientos manualmente',
-      'Asegúrate de asignar la categoría correcta a cada movimiento',
-      'Revisa el Dashboard para ver el efecto en tu saldo real',
-    ],
-    actionLabel: 'Ir a Gastos Reales',
-    actionTab: 'real',
-  },
-  {
     id: 'goals',
     emoji: '🎯',
     title: 'Crea un objetivo de ahorro',
@@ -128,6 +109,31 @@ const STEPS: Step[] = [
     ],
     actionLabel: 'Ir a Objetivos',
     actionTab: 'goals',
+  },
+];
+
+// ─── Pasos recomendados ────────────────────────────────────────
+
+const RECOMMENDED_STEPS: Step[] = [
+  {
+    id: 'categories',
+    emoji: '🏷️',
+    title: 'Revisa y personaliza tus categorías',
+    timeEstimate: '~3 min',
+    color: '#0d9488',
+    description:
+      'Las categorías organizan tus ingresos y gastos. La app incluye las más habituales (Salario, Alquiler, Alimentación, Transporte...) pero puedes añadir las tuyas propias. Tenerlas bien configuradas mejora la auto-categorización al importar extractos bancarios.',
+    tip: 'Accede a las Categorías desde el icono de etiqueta 🏷️ en el header superior derecho. Puedes crear categorías de tipo "Ingreso" o "Gasto" con un color identificativo.',
+    tipType: 'info',
+    substeps: [
+      'Haz clic en el icono 🏷️ del header para abrir Categorías',
+      'Revisa las categorías de ingreso y gasto ya creadas',
+      'Elimina las que no vayas a usar',
+      'Añade las categorías que te falten para tu situación',
+      'Asigna colores para identificarlas visualmente',
+    ],
+    actionLabel: 'Ir a Categorías',
+    actionTab: 'categories',
   },
   {
     id: 'security',
@@ -190,10 +196,11 @@ const STEPS: Step[] = [
   },
 ];
 
-// ─── Componente principal ─────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────
 
 interface GettingStartedProps {
   T: any;
+  securityEnabled: boolean;
   onNavigate: (tab: string) => void;
   onNavigateKeepOpen: (tab: string) => void;
   onOpenSecurity: () => void;
@@ -201,20 +208,56 @@ interface GettingStartedProps {
   onClose: () => void;
 }
 
+// ─── Componente principal ─────────────────────────────────────
+
 export function GettingStarted({
   T,
-  onNavigate,
+  securityEnabled,
   onNavigateKeepOpen,
   onOpenSecurity,
   onOpenBackup,
   onClose,
 }: GettingStartedProps) {
+  const { accounts, realExpenses, projections, goals, backupHistory } =
+    useApp();
 
   const [expandedStep, setExpandedStep] = useState<string | null>('accounts');
+  const [visitedSteps, setVisitedSteps] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('fh_gs_visited') ?? '[]');
+    } catch {
+      return [];
+    }
+  });
+  
 
-  const totalTime = '~25 min';
+  // ── Detección automática de pasos completados ──────────────────
+  const completed: Record<string, boolean> = {
+    accounts:    accounts.length > 0,
+    real:        realExpenses.length > 0,
+    projections: projections.length > 0,
+    goals:       goals.length > 0,
+    categories:  visitedSteps.includes('categories'), // ✅ completado al visitar
+    security:    securityEnabled || visitedSteps.includes('security'),
+    backup:      backupHistory.length > 0,
+    explore:     accounts.length > 0 && realExpenses.length > 0,
+  };
+  
+  const essentialDone = ESSENTIAL_STEPS.filter((s) => completed[s.id]).length;
+  const recommendedDone = RECOMMENDED_STEPS.filter(
+    (s) => completed[s.id]
+  ).length;
+  const totalDone = essentialDone + recommendedDone;
+  const totalSteps = ESSENTIAL_STEPS.length + RECOMMENDED_STEPS.length;
 
   const handleAction = (step: Step) => {
+    // ✅ Marcar como visitado al pulsar la acción
+    if (!visitedSteps.includes(step.id)) {
+      const updated = [...visitedSteps, step.id];
+      setVisitedSteps(updated);
+      localStorage.setItem('fh_gs_visited', JSON.stringify(updated));
+    }
+  
     if (step.actionTab) {
       onNavigateKeepOpen(step.actionTab);
     } else if (step.actionCallback === 'security') {
@@ -225,28 +268,414 @@ export function GettingStarted({
       onClose();
     }
   };
-
+  
   const tipColors = {
     info: { bg: T.accentLight, border: `${T.accent}33`, color: T.accent },
     warning: { bg: T.amberBg, border: T.amberBorder, color: T.amber },
     success: { bg: T.greenBg, border: T.greenBorder, color: T.green },
   };
+  const tipIcons = { info: '💡', warning: '⚠️', success: '✅' };
 
-  const tipIcons = {
-    info: '💡',
-    warning: '⚠️',
-    success: '✅',
+  // ── Render de un paso individual ────────────────────────────────
+  const renderStep = (step: Step, globalIndex: number) => {
+    const isDone = completed[step.id];
+    const isExpanded = expandedStep === step.id;
+    const tipCfg = tipColors[step.tipType];
+
+    return (
+      <div
+        key={step.id}
+        style={{
+          borderRadius: '1rem',
+          border: `1.5px solid ${
+            isDone
+              ? T.greenBorder
+              : isExpanded
+              ? step.color + '66'
+              : T.cardBorder
+          }`,
+          background: isDone
+            ? T.greenBg
+            : isExpanded
+            ? step.color + '08'
+            : T.pageBg,
+          overflow: 'hidden',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {/* Cabecera del paso */}
+        <button
+          onClick={() => setExpandedStep(isExpanded ? null : step.id)}
+          style={{
+            width: '100%',
+            padding: '1rem 1.125rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.875rem',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          {/* Icono */}
+          <div
+            style={{
+              width: '2.5rem',
+              height: '2.5rem',
+              borderRadius: '0.75rem',
+              background: isDone
+                ? T.green + '22'
+                : isExpanded
+                ? step.color + '22'
+                : T.cardBg,
+              border: `1.5px solid ${
+                isDone
+                  ? T.greenBorder
+                  : isExpanded
+                  ? step.color + '44'
+                  : T.cardBorder
+              }`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: isDone ? '1rem' : '1.25rem',
+              fontWeight: 800,
+              color: isDone ? T.green : undefined,
+              flexShrink: 0,
+              transition: 'all 0.2s',
+            }}
+          >
+            {isDone ? '✓' : step.emoji}
+          </div>
+
+          {/* Texto */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.15rem',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  color: isDone ? T.green : step.color,
+                  opacity: 0.8,
+                }}
+              >
+                Paso {globalIndex + 1}
+              </span>
+              {isDone ? (
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.5rem',
+                    borderRadius: '9999px',
+                    background: T.green + '22',
+                    border: `1px solid ${T.greenBorder}`,
+                    color: T.green,
+                  }}
+                >
+                  ✓ Completado
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.5rem',
+                    borderRadius: '9999px',
+                    background: T.pageBg,
+                    border: `1px solid ${T.cardBorder}`,
+                    color: T.muted,
+                  }}
+                >
+                  {step.timeEstimate}
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                color: isDone ? T.green : isExpanded ? step.color : T.title,
+                textDecoration: isDone ? 'line-through' : 'none',
+                opacity: isDone ? 0.7 : 1,
+                transition: 'color 0.2s',
+              }}
+            >
+              {step.title}
+            </div>
+          </div>
+
+          {/* Chevron */}
+          <div
+            style={{
+              fontSize: '0.75rem',
+              color: isDone ? T.green : T.muted,
+              transition: 'transform 0.2s',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              flexShrink: 0,
+              opacity: isDone ? 0.5 : 1,
+            }}
+          >
+            ▼
+          </div>
+        </button>
+
+        {/* Contenido expandido */}
+        {isExpanded && (
+          <div
+            style={{
+              padding: '0 1.125rem 1.125rem',
+              animation: 'fadeSlideIn 0.2s ease both',
+            }}
+          >
+            <div
+              style={{
+                height: '1px',
+                background: isDone ? T.greenBorder : step.color + '22',
+                marginBottom: '1rem',
+              }}
+            />
+
+            {/* Descripción */}
+            <p
+              style={{
+                fontSize: '0.825rem',
+                color: T.body,
+                lineHeight: 1.7,
+                margin: '0 0 1rem',
+              }}
+            >
+              {step.description}
+            </p>
+
+            {/* Tip */}
+            <div
+              style={{
+                padding: '0.875rem 1rem',
+                borderRadius: '0.875rem',
+                background: tipCfg.bg,
+                border: `1px solid ${tipCfg.border}`,
+                marginBottom: '1rem',
+                display: 'flex',
+                gap: '0.625rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>
+                {tipIcons[step.tipType]}
+              </span>
+              <p
+                style={{
+                  fontSize: '0.8rem',
+                  color: tipCfg.color,
+                  lineHeight: 1.6,
+                  margin: 0,
+                  fontWeight: 600,
+                }}
+              >
+                {step.tip}
+              </p>
+            </div>
+
+            {/* Cómo hacerlo */}
+            <div
+              style={{
+                padding: '1rem',
+                borderRadius: '0.875rem',
+                background: T.pageBg,
+                border: `1px solid ${T.cardBorder}`,
+                marginBottom: '1rem',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  color: T.muted,
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.08em',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                Cómo hacerlo
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}
+              >
+                {step.substeps.map((substep, si) => (
+                  <div
+                    key={si}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.625rem',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '1.375rem',
+                        height: '1.375rem',
+                        borderRadius: '50%',
+                        background: isDone ? T.green + '18' : step.color + '18',
+                        border: `1.5px solid ${
+                          isDone ? T.greenBorder : step.color + '44'
+                        }`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.6rem',
+                        fontWeight: 800,
+                        color: isDone ? T.green : step.color,
+                        flexShrink: 0,
+                        marginTop: '0.1rem',
+                      }}
+                    >
+                      {si + 1}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.8rem',
+                        color: T.body,
+                        lineHeight: 1.5,
+                        flex: 1,
+                      }}
+                    >
+                      {substep}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Botón de acción */}
+            {!isDone ? (
+              <button
+                onClick={() => handleAction(step)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '0.875rem',
+                  border: 'none',
+                  background: step.color,
+                  color: '#ffffff',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+              >
+                {step.actionLabel} →
+              </button>
+            ) : (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  borderRadius: '0.875rem',
+                  background: T.greenBg,
+                  border: `1px solid ${T.greenBorder}`,
+                  textAlign: 'center',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  color: T.green,
+                }}
+              >
+                ✅ Paso completado
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
+  // ── Render de una sección (Esenciales / Recomendados) ──────────
+  const renderSection = (
+    label: string,
+    badge: string,
+    steps: Step[],
+    startIndex: number,
+    doneCount: number
+  ) => (
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: T.muted,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.08em',
+            }}
+          >
+            {label}
+          </span>
+          <span
+            style={{
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '9999px',
+              background: T.accentLight,
+              color: T.accent,
+              border: `1px solid ${T.accent}33`,
+            }}
+          >
+            {badge}
+          </span>
+        </div>
+        <span
+          style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            color: doneCount === steps.length ? T.green : T.muted,
+          }}
+        >
+          {doneCount}/{steps.length} completados
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {steps.map((step, i) => renderStep(step, startIndex + i))}
+      </div>
+    </div>
+  );
+
+  // ── Render principal ───────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* ── Hero ── */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Hero con barra de progreso global */}
       <div
         style={{
           padding: '1.5rem',
           borderRadius: '1.25rem',
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)',
-          marginBottom: '0.25rem',
+          background:
+            'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)',
         }}
       >
         <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🚀</div>
@@ -266,345 +695,136 @@ export function GettingStarted({
             fontSize: '0.825rem',
             color: '#93c5fd',
             lineHeight: 1.5,
-            marginBottom: '0.75rem',
+            marginBottom: '0.875rem',
           }}
         >
-          Sigue estos pasos en orden para sacar el máximo partido
-          a FinanzasHogar desde el primer día.
+          Sigue estos pasos para sacar el máximo partido a FinanzasHogar desde
+          el primer día.
         </div>
+
+        {/* Barra de progreso */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            flexWrap: 'wrap',
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '0.875rem',
+            padding: '0.875rem 1rem',
           }}
         >
           <div
             style={{
-              padding: '0.35rem 0.875rem',
-              borderRadius: '9999px',
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              color: '#93c5fd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.5rem',
             }}
           >
-            ⏱️ Tiempo total estimado: {totalTime}
+            <span
+              style={{ fontSize: '0.72rem', fontWeight: 700, color: '#93c5fd' }}
+            >
+              Progreso total
+            </span>
+            <span
+              style={{ fontSize: '0.72rem', fontWeight: 800, color: '#ffffff' }}
+            >
+              {totalDone} de {totalSteps} pasos
+            </span>
           </div>
           <div
             style={{
-              fontSize: '0.72rem',
-              color: 'rgba(255,255,255,0.4)',
+              height: '0.375rem',
+              borderRadius: '9999px',
+              background: 'rgba(255,255,255,0.15)',
+              overflow: 'hidden',
             }}
           >
-            {STEPS.length} pasos
+            <div
+              style={{
+                height: '100%',
+                width: `${(totalDone / totalSteps) * 100}%`,
+                borderRadius: '9999px',
+                background: 'linear-gradient(90deg, #60a5fa, #34d399)',
+                transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ── Lista de pasos ── */}
-      {STEPS.map((step, index) => {
-        const isExpanded = expandedStep === step.id;
-        const tipCfg = tipColors[step.tipType];
+      {/* Sección Esenciales */}
+      {renderSection(
+        '⚡ Esenciales',
+        'Necesarios para empezar',
+        ESSENTIAL_STEPS,
+        0,
+        essentialDone
+      )}
 
-        return (
-          <div
-            key={step.id}
-            style={{
-              borderRadius: '1rem',
-              border: `1.5px solid ${isExpanded ? step.color + '66' : T.cardBorder}`,
-              background: isExpanded ? step.color + '08' : T.pageBg,
-              overflow: 'hidden',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {/* ── Cabecera del paso ── */}
-            <button
-              onClick={() =>
-                setExpandedStep(isExpanded ? null : step.id)
-              }
-              style={{
-                width: '100%',
-                padding: '1rem 1.125rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.875rem',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              {/* Número + emoji */}
-              <div
-                style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  borderRadius: '0.75rem',
-                  background: isExpanded ? step.color + '22' : T.cardBg,
-                  border: `1.5px solid ${isExpanded ? step.color + '44' : T.cardBorder}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.25rem',
-                  flexShrink: 0,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {step.emoji}
-              </div>
+      {/* Divisor */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ flex: 1, height: '1px', background: T.cardBorder }} />
+        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted }}>
+          RECOMENDADOS
+        </span>
+        <div style={{ flex: 1, height: '1px', background: T.cardBorder }} />
+      </div>
 
-              {/* Texto */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    marginBottom: '0.15rem',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      color: step.color,
-                      opacity: 0.7,
-                    }}
-                  >
-                    Paso {index + 1}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '0.62rem',
-                      fontWeight: 700,
-                      padding: '0.1rem 0.5rem',
-                      borderRadius: '9999px',
-                      background: T.pageBg,
-                      border: `1px solid ${T.cardBorder}`,
-                      color: T.muted,
-                    }}
-                  >
-                    {step.timeEstimate}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 800,
-                    color: isExpanded ? step.color : T.title,
-                    transition: 'color 0.2s',
-                  }}
-                >
-                  {step.title}
-                </div>
-              </div>
+      {/* Sección Recomendados */}
+      {renderSection(
+        '🌟 Recomendados',
+        'Para sacar el máximo partido',
+        RECOMMENDED_STEPS,
+        ESSENTIAL_STEPS.length,
+        recommendedDone
+      )}
 
-              {/* Chevron */}
-              <div
-                style={{
-                  fontSize: '0.75rem',
-                  color: T.muted,
-                  transition: 'transform 0.2s',
-                  transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                  flexShrink: 0,
-                }}
-              >
-                ▼
-              </div>
-            </button>
-
-            {/* ── Contenido expandido ── */}
-            {isExpanded && (
-              <div
-                style={{
-                  padding: '0 1.125rem 1.125rem',
-                  animation: 'fadeSlideIn 0.2s ease both',
-                }}
-              >
-                {/* Separador */}
-                <div
-                  style={{
-                    height: '1px',
-                    background: step.color + '22',
-                    marginBottom: '1rem',
-                  }}
-                />
-
-                {/* Descripción */}
-                <p
-                  style={{
-                    fontSize: '0.825rem',
-                    color: T.body,
-                    lineHeight: 1.7,
-                    margin: '0 0 1rem',
-                  }}
-                >
-                  {step.description}
-                </p>
-
-                {/* Tip */}
-                <div
-                  style={{
-                    padding: '0.875rem 1rem',
-                    borderRadius: '0.875rem',
-                    background: tipCfg.bg,
-                    border: `1px solid ${tipCfg.border}`,
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    gap: '0.625rem',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <span style={{ fontSize: '1rem', flexShrink: 0 }}>
-                    {tipIcons[step.tipType]}
-                  </span>
-                  <p
-                    style={{
-                      fontSize: '0.8rem',
-                      color: tipCfg.color,
-                      lineHeight: 1.6,
-                      margin: 0,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {step.tip}
-                  </p>
-                </div>
-
-                {/* Pasos concretos */}
-                <div
-                  style={{
-                    padding: '1rem',
-                    borderRadius: '0.875rem',
-                    background: T.pageBg,
-                    border: `1px solid ${T.cardBorder}`,
-                    marginBottom: '1rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      color: T.muted,
-                      textTransform: 'uppercase' as const,
-                      letterSpacing: '0.08em',
-                      marginBottom: '0.75rem',
-                    }}
-                  >
-                    Cómo hacerlo
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    {step.substeps.map((substep, si) => (
-                      <div
-                        key={si}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '0.625rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: '1.375rem',
-                            height: '1.375rem',
-                            borderRadius: '50%',
-                            background: step.color + '18',
-                            border: `1.5px solid ${step.color}44`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.6rem',
-                            fontWeight: 800,
-                            color: step.color,
-                            flexShrink: 0,
-                            marginTop: '0.1rem',
-                          }}
-                        >
-                          {si + 1}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '0.8rem',
-                            color: T.body,
-                            lineHeight: 1.5,
-                            flex: 1,
-                          }}
-                        >
-                          {substep}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Botón de acción */}
-                <button
-                  onClick={() => handleAction(step)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '0.875rem',
-                    border: 'none',
-                    background: step.color,
-                    color: '#ffffff',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    transition: 'opacity 0.15s',
-                  }}
-                  onMouseEnter={e =>
-                    (e.currentTarget.style.opacity = '0.9')
-                  }
-                  onMouseLeave={e =>
-                    (e.currentTarget.style.opacity = '1')
-                  }
-                >
-                  {step.actionLabel} →
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* ── Footer motivacional ── */}
+      {/* Footer motivacional */}
       <div
         style={{
           padding: '1.25rem',
           borderRadius: '1rem',
-          background: T.greenBg,
-          border: `1px solid ${T.greenBorder}`,
+          background: totalDone === totalSteps ? T.greenBg : T.pageBg,
+          border: `1px solid ${
+            totalDone === totalSteps ? T.greenBorder : T.cardBorder
+          }`,
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎉</div>
-        <div
-          style={{
-            fontSize: '0.875rem',
-            fontWeight: 800,
-            color: T.green,
-            marginBottom: '0.25rem',
-          }}
-        >
-          ¡Cuando completes estos pasos, tendrás el control total!
-        </div>
-        <div style={{ fontSize: '0.775rem', color: T.green, opacity: 0.8 }}>
-          Recuerda: puedes volver a esta guía en cualquier momento
-          desde el icono ❓ del header.
-        </div>
+        {totalDone === totalSteps ? (
+          <>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎉</div>
+            <div
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                color: T.green,
+                marginBottom: '0.25rem',
+              }}
+            >
+              ¡Has completado todos los pasos!
+            </div>
+            <div style={{ fontSize: '0.775rem', color: T.green, opacity: 0.8 }}>
+              Tienes el control total de tus finanzas. ¡Sigue así!
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💪</div>
+            <div
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                color: T.title,
+                marginBottom: '0.25rem',
+              }}
+            >
+              ¡Cuando completes estos pasos, tendrás el control total!
+            </div>
+            <div style={{ fontSize: '0.775rem', color: T.muted }}>
+              Puedes volver a esta guía en cualquier momento desde el icono ❓
+              del header.
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

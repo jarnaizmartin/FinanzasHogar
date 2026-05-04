@@ -28,51 +28,173 @@ nav {
   -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 768px) {
+/* ── Solo visible en impresión ────────────────────────────────────────────── */
+.fh-print-only {
+  display: none !important;
+}
 
-  /* ── Tipografía general más compacta ── */
+/* ── PRINT ────────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm 1.5cm 2.2cm 1.5cm;
+  }
+
+  /* ── FIX CRÍTICO: permitir que el contenido fluya más allá del viewport ── */
+  html,
+  body,
+  #root {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    max-width: none !important;
+  }
+
+  /* Ocultar todo */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Mostrar solo la sección imprimible */
+  .fh-print-section,
+  .fh-print-section * {
+    visibility: visible;
+  }
+
+  /* Contenedor principal */
+  .fh-print-section {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    padding: 0 0 2.5cm 0 !important; /* espacio para el footer fijo */
+    margin: 0 !important;
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+    color: #0f172a !important;
+  }
+
+  /* Ocultar elementos interactivos */
+  .fh-no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Mostrar elementos solo de impresión */
+  .fh-print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* ── Footer fijo — se repite en cada página ── */
+  .fh-print-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    visibility: visible !important;
+    background: #ffffff !important;
+    padding: 0.3cm 1.5cm 0.4cm !important;
+    z-index: 9999 !important;
+  }
+
+  /* ── Número de página — solo counter(page), counter(pages) no soportado en Chrome ── */
+  .fh-page-number::after {
+    content: 'Página ' counter(page);
+  }
+
+  /* ── Forzar colores en impresión ── */
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* ── Page breaks ── */
+  /* Solo evitar cortes dentro de filas de tabla */
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Las cards de movimientos SÍ pueden saltar de página */
+  .fh-print-section > * {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  /* Escala de textos */
+  h1,
+  h2 {
+    font-size: 14pt !important;
+    font-weight: 800 !important;
+  }
+  h3 {
+    font-size: 11pt !important;
+  }
+  th {
+    font-size: 8pt !important;
+  }
+  td {
+    font-size: 8.5pt !important;
+  }
+}
+
+/* ── MOBILE ───────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
   body {
     font-size: 14px;
   }
-
-  /* ── Header más compacto ── */
   header nav button {
     padding: 0.5rem 0.75rem !important;
     font-size: 0.72rem !important;
   }
-
-  /* ── Main con menos padding ── */
   main {
     padding: 1rem !important;
     padding-right: 1rem !important;
   }
-
-  /* ── Cards más compactas ── */
   h2 {
     font-size: 1.5rem !important;
   }
-
-  /* ── Tablas con scroll horizontal natural ── */
   table {
     font-size: 0.75rem !important;
   }
-
-  /* ── Grids de 2 columnas pasan a 1 en móvil ── */
   div[style*="gridTemplateColumns: '1fr 1fr'"],
   div[style*="gridTemplateColumns: 'repeat(2"],
   div[style*="gridTemplateColumns: 'repeat(3"],
   div[style*="gridTemplateColumns: 'repeat(4"] {
     grid-template-columns: 1fr !important;
   }
-
-  /* ── Botones del header más pequeños ── */
   .fh-btn {
     width: 1.875rem !important;
     height: 1.875rem !important;
   }
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
 
-  /* ── Formularios más compactos ── */
-  input, select, textarea {
-    font-size: 16px !important; /* evita zoom automático en iOS */
+/* ── CoachMarksTour ───────────────────────────────────────────────────────── */
+@keyframes cmtPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 9px rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* ── Animación modal ──────────────────────────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

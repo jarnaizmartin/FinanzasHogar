@@ -160,14 +160,16 @@ function RequestLicenseModal({ onClose }: { onClose: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           access_key: '10837e48-e398-49d2-bf7d-7bd8d37cc5da',
-          subject: 'Solicitud de licencia — Finance Hub',
-          to_email: 'jarnaiz.martin@gmail.com',
+          subject: 'Solicitud de licencia — FinanzasHogar',
+          from_name: 'FinanzasHogar App',
           message: `SOLICITUD DE LICENCIA\n\nDevice ID: ${deviceId}`,
         }),
       });
-      if (response.ok) {
+      const data = await response.json();
+      if (response.ok && data.success) {
         setSendStatus('success');
       } else {
+        console.error('[Web3Forms]', data);
         setSendStatus('error');
       }
     } catch (err) {

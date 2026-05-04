@@ -753,15 +753,29 @@ const SHORTCUTS: { category: string; items: Shortcut[] }[] = [
 
 interface HelpCenterProps {
   T: any;
+  securityEnabled?: boolean;
   onClose: () => void;
   onRestartTour: () => void;
   onNavigate: (tab: string) => void;
   onNavigateKeepOpen?: (tab: string) => void;
   onOpenSecurity: () => void;
   onOpenBackup: () => void;
+  onRestartCoachTour?: () => void;
 }
 
-export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKeepOpen, onOpenSecurity, onOpenBackup, initialSection }: HelpCenterProps) {
+export function HelpCenter({
+  T,
+  securityEnabled = false,
+  onClose,
+  onRestartTour,
+  onNavigate,
+  onNavigateKeepOpen,
+  onOpenSecurity,
+  onOpenBackup,
+  onRestartCoachTour,
+  initialSection,
+}: HelpCenterProps)
+ {
   const [section, setSection] = useState<HelpSection>(initialSection ?? 'home');
   const [manualSection, setManualSection] = useState<string | null>(null);
   const [faqSearch, setFaqSearch] = useState('');
@@ -821,7 +835,7 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
 
   const panelStyle: React.CSSProperties = {
     position: 'fixed',
-    top: isMobile && navigatedAway ? 'auto' : 0,
+    top: isMobile && navigatedAway ? 'auto' : '7.5rem',
     bottom: 0,
     right: 0,
     left: isMobile && navigatedAway ? 0 : 'auto',
@@ -830,12 +844,13 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
     height: isMobile && navigatedAway ? '45vh' : undefined,
     background: T.cardBg,
     borderLeft: isMobile ? 'none' : `1px solid ${T.cardBorder}`,
-    borderTop: isMobile ? `1px solid ${T.cardBorder}` : 'none',
+    borderTop: `1px solid ${T.cardBorder}`,
     boxShadow: '-8px 0 40px rgba(0,0,0,0.2)',
     zIndex: 60,
     display: 'flex',
     flexDirection: 'column',
     animation: 'slideInRight 0.3s ease both',
+    borderRadius: '1rem 0 0 0',
   };
 
   const headerStyle: React.CSSProperties = {
@@ -923,8 +938,8 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
       </div>
 
       {/* Opciones principales */}
-            {/* Tour */}
-            <div
+      {/* Tour */}
+      <div
         style={{
           padding: '1.25rem',
           borderRadius: '1rem',
@@ -986,7 +1001,64 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
         </div>
       </div>
 
-      {/* Primeros pasos */}
+            {/* Guía de iconos del header */}
+            {onRestartCoachTour && (
+        <div
+          style={{
+            padding: '1.25rem',
+            borderRadius: '1rem',
+            border: '1.5px solid #a5b4fc',
+            background: T.dark ? 'rgba(99,102,241,0.1)' : '#eef2ff',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div
+              style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '0.875rem',
+                background: '#6366f122',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                flexShrink: 0,
+              }}
+            >
+              🎯
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#6366f1' }}>
+                Guía de iconos del header
+              </div>
+              <div style={{ fontSize: '0.775rem', color: T.muted, marginTop: '0.2rem' }}>
+                Repasa para qué sirve cada botón de la barra superior
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                setTimeout(onRestartCoachTour, 400);
+              }}
+              style={{
+                padding: '0.55rem 1.125rem',
+                borderRadius: '0.75rem',
+                border: 'none',
+                background: '#6366f1',
+                color: '#ffffff',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              ▶ Iniciar
+            </button>
+          </div>
+        </div>
+      )}
+
+{/* Primeros pasos */}
       <button
         onClick={() => setSection('getting-started')}
         style={{
@@ -1002,11 +1074,11 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
           transition: 'all 0.15s',
           width: '100%',
         }}
-        onMouseEnter={e => {
+        onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateX(4px)';
           e.currentTarget.style.boxShadow = T.cardShadow;
         }}
-        onMouseLeave={e => {
+        onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'translateX(0)';
           e.currentTarget.style.boxShadow = 'none';
         }}
@@ -1027,10 +1099,18 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
           🚀
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#92400e' }}>
+          <div
+            style={{ fontSize: '0.95rem', fontWeight: 800, color: '#92400e' }}
+          >
             Guía de primeros pasos
           </div>
-          <div style={{ fontSize: '0.775rem', color: T.muted, marginTop: '0.2rem' }}>
+          <div
+            style={{
+              fontSize: '0.775rem',
+              color: T.muted,
+              marginTop: '0.2rem',
+            }}
+          >
             8 pasos para dominar FinanzasHogar en ~25 minutos
           </div>
         </div>
@@ -1129,7 +1209,6 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
         </button>
       ))}
 
-      
       {/* Nota de privacidad */}
       <div
         style={{
@@ -1826,7 +1905,12 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
   const sectionTitles = {
     home: { title: 'Centro de Ayuda', emoji: '❓' },
     'getting-started': { title: 'Guía de primeros pasos', emoji: '🚀' },
-    manual: { title: manualSection ? MANUAL_SECTIONS.find(s => s.id === manualSection)?.title ?? 'Manual' : 'Manual de usuario', emoji: '📖' },
+    manual: {
+      title: manualSection
+        ? MANUAL_SECTIONS.find((s) => s.id === manualSection)?.title ?? 'Manual'
+        : 'Manual de usuario',
+      emoji: '📖',
+    },
     faq: { title: 'Preguntas frecuentes', emoji: '💬' },
     shortcuts: { title: 'Atajos de teclado', emoji: '⌨️' },
   };
@@ -1930,14 +2014,14 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
               flexShrink: 0,
             }}
           >
-          {([
-              { id: 'getting-started', emoji: '🚀', label: 'Primeros pasos' },
-              { id: 'faq', emoji: '💬', label: 'FAQ' },
-              { id: 'manual', emoji: '📖', label: 'Manual' },
-              { id: 'shortcuts', emoji: '⌨️', label: 'Atajos' },
-
-            ] as const).map(tab => (
-
+            {(
+              [
+                { id: 'getting-started', emoji: '🚀', label: 'Primeros pasos' },
+                { id: 'faq', emoji: '💬', label: 'FAQ' },
+                { id: 'manual', emoji: '📖', label: 'Manual' },
+                { id: 'shortcuts', emoji: '⌨️', label: 'Atajos' },
+              ] as const
+            ).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => {
@@ -1970,17 +2054,18 @@ export function HelpCenter({ T, onClose, onRestartTour, onNavigate, onNavigateKe
         <div style={contentStyle}>
           {section === 'home' && renderHome()}
           {section === 'getting-started' && (
-        <GettingStarted
-        T={T}
-        onNavigate={onNavigate}
-        onNavigateKeepOpen={(tab) => {
-          setNavigatedAway(true);
-          onNavigateKeepOpen?.(tab);
-        }}
-        onOpenSecurity={onOpenSecurity}
-        onOpenBackup={onOpenBackup}
-        onClose={onClose}
-      />
+            <GettingStarted
+              T={T}
+              securityEnabled={securityEnabled}
+              onNavigate={onNavigate}
+              onNavigateKeepOpen={(tab) => {
+                setNavigatedAway(true);
+                onNavigateKeepOpen?.(tab);
+              }}
+              onOpenSecurity={onOpenSecurity}
+              onOpenBackup={onOpenBackup}
+              onClose={onClose}
+            />
           )}
           {section === 'manual' && renderManual()}
           {section === 'faq' && renderFAQ()}
