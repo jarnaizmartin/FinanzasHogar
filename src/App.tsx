@@ -6,6 +6,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { SecurityProvider } from './SecurityContext';
 import { AppProvider } from './AppProvider';
 import { AppShell } from './AppShell';
+import { GlobalModals } from './components/GlobalModals';
 
 // ─── Animaciones globales ─────────────────────────────────────────────────────
 const styleSheet = document.createElement('style');
@@ -72,6 +73,7 @@ export default function App() {
       <SecurityProvider>
         <AppProvider>
           <AppShell />
+          <GlobalModals />
         </AppProvider>
       </SecurityProvider>
     </ToastProvider>

@@ -4,8 +4,32 @@ import { useToast } from '../contexts/ToastContext';
 import { PrintButton, PrintHeader, PrintFooter, ConfirmModal } from '../components/UI';
 
 export function AlertsPanel() {
-  const { T, computedAlerts, ignoredAlerts, setIgnoredAlerts, setTab } =
-    useApp();
+  const {
+    T,
+    computedAlerts,
+    ignoredAlerts,
+    setIgnoredAlerts,
+    setTab,
+    openPaymentModal,
+    requestOpenSimulator,
+  } = useApp();
+
+  // Ejecuta la acción primaria de una alerta según su actionType.
+  const runAlertAction = (alert: typeof computedAlerts[number]) => {
+    const accountId = alert.data?.accountId as string | undefined;
+    switch (alert.actionType) {
+      case 'open_payment_modal':
+        if (accountId) openPaymentModal(accountId);
+        break;
+      case 'open_simulator':
+        if (accountId) requestOpenSimulator(accountId);
+        break;
+      case 'navigate':
+      default:
+        if (alert.actionTab) setTab(alert.actionTab);
+        break;
+    }
+  };
 
   const [filter, setFilter] = useState<
     'all' | 'critical' | 'warning' | 'positive'
@@ -82,6 +106,9 @@ export function AlertsPanel() {
     goal_overdue: '📅',
     goal_completed: '🎉',
     duplicate_projection: '🔄',
+    credit_utilization_high: '💳',
+    credit_payment_due: '⏰',
+    credit_interest_warning: '💰',
   };
 
   return (
@@ -411,9 +438,9 @@ export function AlertsPanel() {
                   <div
                     style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}
                   >
-                    {!isDismissed && alert.actionTab && (
+                    {!isDismissed && (alert.actionTab || alert.actionType) && (
                       <button
-                        onClick={() => setTab(alert.actionTab!)}
+                        onClick={() => runAlertAction(alert)}
                         style={{
                           padding: '0.45rem 0.875rem',
                           borderRadius: '0.625rem',

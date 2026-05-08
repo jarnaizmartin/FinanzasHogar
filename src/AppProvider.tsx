@@ -9,6 +9,8 @@ import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import { UIProvider, useUI } from './contexts/UIContext';
 import { calcRealBalance } from './lib/balanceCalc';
+import { calcCreditCardDebt, daysUntilPayment } from './lib/creditCardUtils';
+import { calcLoanDebt } from './lib/loanUtils';
 import { applyRecurringProjections } from './lib/recurringMotor';
 import {
   convertAmount,
@@ -45,16 +47,29 @@ export function calcForecast(
 ): ForecastMonth[] {
   const filteredAccounts =
     accountId === 'all' ? accounts : accounts.filter((a) => a.id === accountId);
-  const filteredProjections =
+    const filteredProjections =
     accountId === 'all'
-      ? projections
-      : projections.filter((p) => p.accountId === accountId);
+      ? projections.filter((p) => p.type !== 'transfer')
+      : projections.filter(
+          (p) =>
+            p.accountId === accountId ||
+            (p.type === 'transfer' && p.toAccountId === accountId)
+        );
 
   const now = new Date();
   const currentMonthKey = monthKey(now);
 
   const startBalance = filteredAccounts.reduce((s, a) => {
-    const { realBalance } = calcRealBalance(a, realExpenses, rates, baseCurrency);
+    let realBalance: number;
+    if (a.accountType === 'credit_card') {
+      const { debt } = calcCreditCardDebt(a, realExpenses, rates, baseCurrency);
+      realBalance = -debt; // La deuda es un pasivo → negativo en el patrimonio
+    } else if (a.accountType === 'loan') {
+      const { debt } = calcLoanDebt(a, realExpenses, rates, baseCurrency);
+      realBalance = -debt; // Idem: pasivo → negativo
+    } else {
+      ({ realBalance } = calcRealBalance(a, realExpenses, rates, baseCurrency));
+    }
     const accCurrency = a.currency ?? baseCurrency;
     return s + convertAmount(realBalance, accCurrency, baseCurrency, rates);
   }, 0);
@@ -91,6 +106,8 @@ export function calcForecast(
     if (isPast) {
       realExpenses.forEach((e) => {
         if (e.valueDate.slice(0, 7) !== key) return;
+        // Excluir transferencias del total consolidado (se cancelan mutuamente)
+        if (e.isTransfer && accountId === 'all') return;
         const acc = filteredAccounts.find((a) => a.id === e.accountId);
         if (!acc || e.valueDate <= acc.date) return;
         const amount = convertAmount(e.amount, e.currency, baseCurrency, rates);
@@ -101,6 +118,8 @@ export function calcForecast(
       const realByCat: Record<string, { income: number; expense: number }> = {};
       realExpenses.forEach((e) => {
         if (e.valueDate.slice(0, 7) !== key) return;
+        // Excluir transferencias del total consolidado (se cancelan mutuamente)
+        if (e.isTransfer && accountId === 'all') return;
         const acc = filteredAccounts.find((a) => a.id === e.accountId);
         if (!acc || e.valueDate <= acc.date) return;
         if (!realByCat[e.categoryId]) realByCat[e.categoryId] = { income: 0, expense: 0 };
@@ -111,14 +130,28 @@ export function calcForecast(
       getActiveProjections(d).forEach((p) => {
         const projected = projToBase(p);
         const realForCat = realByCat[p.categoryId];
-        if (p.type === 'income') income += Math.max(0, projected - (realForCat?.income ?? 0));
-        else expense += Math.max(0, projected - (realForCat?.expense ?? 0));
+        if (p.type === 'transfer') {
+          if (p.accountId === accountId)
+            expense += Math.max(0, projected - (realForCat?.expense ?? 0));
+          else if (p.toAccountId === accountId)
+            income += Math.max(0, projected - (realForCat?.income ?? 0));
+        } else if (p.type === 'income') {
+          income += Math.max(0, projected - (realForCat?.income ?? 0));
+        } else {
+          expense += Math.max(0, projected - (realForCat?.expense ?? 0));
+        }
       });
     } else {
       getActiveProjections(d).forEach((p) => {
         const converted = projToBase(p);
-        if (p.type === 'income') income += converted;
-        else expense += converted;
+        if (p.type === 'transfer') {
+          if (p.accountId === accountId) expense += converted;
+          else if (p.toAccountId === accountId) income += converted;
+        } else if (p.type === 'income') {
+          income += converted;
+        } else {
+          expense += converted;
+        }
       });
     }
 
@@ -423,6 +456,80 @@ function AppCoreProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // ── Alertas de tarjetas de crédito ────────────────────────────────────────
+    // Estrategia de acciones (UX):
+    //  • Pago vencido      → 'open_payment_modal' (acción directa, máxima urgencia)
+    //  • Utilización alta  → 'open_simulator'    (educa: "esto te costará X")
+    //  • Coste intereses   → 'open_simulator'    (motiva a amortizar más rápido)
+    accounts
+      .filter((acc) => acc.accountType === 'credit_card')
+      .forEach((acc) => {
+        const { debt: creditDebt, utilizationPct } = calcCreditCardDebt(
+          acc,
+          realExpenses,
+          rates,
+          baseCurrency
+        );
+        const currency = acc.currency ?? baseCurrency;
+        const creditLimit = acc.creditLimit ?? 0;
+
+        // ── 1. Alta utilización (>= 70%) ─────────────────────────────────────
+        if (creditLimit > 0 && utilizationPct >= 70) {
+          const isCritical = utilizationPct >= 90;
+          alerts.push({
+            id: `credit_utilization_${acc.id}`,
+            type: 'credit_utilization_high',
+            severity: isCritical ? 'critical' : 'warning',
+            title: `💳 ${acc.name} — utilización ${isCritical ? 'crítica' : 'alta'}`,
+            message: `Usas el ${Math.round(utilizationPct)}% de tu límite. Deuda actual: ${fmt(creditDebt, currency, currency, rates)} de ${fmt(creditLimit, currency, currency, rates)} de límite total.`,
+            actionLabel: '📊 Simular amortización',
+            actionType: 'open_simulator',
+            data: { accountId: acc.id },
+            generatedAt: Date.now(),
+          });
+        }
+
+        // ── 2. Vencimiento de pago próximo (<= 7 días) ───────────────────────
+        if (acc.paymentDueDay && creditDebt > 0) {
+          const daysUntil = daysUntilPayment(acc) ?? 999;
+          if (daysUntil <= 7) {
+            const isCritical = daysUntil <= 2;
+            const minPaymentTxt = acc.minPaymentPct
+              ? ` Pago mínimo estimado: ${fmt(creditDebt * (acc.minPaymentPct / 100), currency, currency, rates)}.`
+              : '';
+            alerts.push({
+              id: `credit_payment_due_${acc.id}`,
+              type: 'credit_payment_due',
+              severity: isCritical ? 'critical' : 'warning',
+              title: `💳 ${acc.name} — pago vence ${daysUntil === 0 ? 'HOY' : `en ${daysUntil} día${daysUntil !== 1 ? 's' : ''}`}`,
+              message: `Deuda pendiente: ${fmt(creditDebt, currency, currency, rates)}.${minPaymentTxt}`,
+              actionLabel: '💸 Pagar ahora',
+              actionType: 'open_payment_modal',
+              data: { accountId: acc.id },
+              generatedAt: Date.now(),
+            });
+          }
+        }
+
+        // ── 3. Coste en intereses (TAE definida y deuda significativa) ───────
+        if (acc.interestRate && acc.interestRate > 0 && creditDebt > 0) {
+          const yearlyInterest = creditDebt * (acc.interestRate / 100);
+          if (yearlyInterest >= 50) {
+            alerts.push({
+              id: `credit_interest_${acc.id}`,
+              type: 'credit_interest_warning',
+              severity: 'warning',
+              title: `💳 ${acc.name} — coste en intereses`,
+              message: `Si no pagas el saldo completo, pagarás aprox. ${fmt(yearlyInterest, currency, currency, rates)}/año en intereses (${acc.interestRate}% TAE). Pagar el total cada mes evita este coste.`,
+              actionLabel: '📊 Ver simulador',
+              actionType: 'open_simulator',
+              data: { accountId: acc.id },
+              generatedAt: Date.now(),
+            });
+          }
+        }
+      });
+
     return alerts.filter((a) => !ignoredAlerts.includes(a.id));
   }, [
     accounts, projections, categories, realExpenses, goals,
@@ -448,8 +555,34 @@ function AppCoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const realBalanceMap = useMemo(() => {
-    const map: Record<string, ReturnType<typeof calcRealBalance>> = {};
-    accounts.forEach((acc) => { map[acc.id] = calcRealBalance(acc, realExpenses, rates, baseCurrency); });
+    const map: Record<string, any> = {};
+    accounts.forEach((acc) => {
+      if (acc.accountType === 'credit_card') {
+        const { debt, available, utilizationPct, appliedCount, ignoredCount } =
+          calcCreditCardDebt(acc, realExpenses, rates, baseCurrency);
+        map[acc.id] = {
+          realBalance: -debt,        // Negativo → resta al patrimonio
+          creditDebt: debt,          // Deuda actual (positivo, legible)
+          creditAvailable: available,// Disponible = límite - deuda
+          utilizationPct,            // % de utilización del límite
+          appliedCount,
+          ignoredCount,
+        };
+      } else if (acc.accountType === 'loan') {
+        // Préstamos/hipotecas: la deuda resta del patrimonio igual que las tarjetas
+        const { debt, initialDebt, appliedCount, ignoredCount } =
+          calcLoanDebt(acc, realExpenses, rates, baseCurrency);
+        map[acc.id] = {
+          realBalance: -debt,        // Negativo → resta al patrimonio neto
+          loanDebt: debt,            // Capital pendiente HOY (positivo, legible)
+          loanInitialDebt: initialDebt, // Capital pendiente al dar de alta el préstamo
+          appliedCount,              // Pagos/cuotas aplicados
+          ignoredCount,              // Movimientos anteriores al saldo base
+        };
+      } else {
+        map[acc.id] = calcRealBalance(acc, realExpenses, rates, baseCurrency);
+      }
+    });
     return map;
   }, [accounts, realExpenses, rates, baseCurrency]);
 

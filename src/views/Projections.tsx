@@ -56,7 +56,7 @@ const FREQ_LABELS: Record<string, string> = {
 // ─── Tipo del formulario ──────────────────────────────────────────────────────
 type ProjectionForm = {
   name: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: string;
   currency: string;
   frequency: string;
@@ -64,6 +64,7 @@ type ProjectionForm = {
   endDate: string;
   categoryId: string;
   accountId: string;
+  toAccountId: string;
   notes: string;
   active: boolean;
   isRecurring: boolean;
@@ -137,6 +138,7 @@ export function Projections() {
     endDate: '',
     categoryId: '',
     accountId: accounts[0]?.id ?? '',
+    toAccountId: '',
     notes: '',
     active: true,
     isRecurring: false,
@@ -151,8 +153,14 @@ export function Projections() {
     if (!form.name.trim()) e.name = 'El nombre es obligatorio';
     if (!form.amount || +form.amount <= 0)
       e.amount = 'Introduce un importe válido';
-    if (!form.accountId) e.accountId = 'Selecciona una cuenta';
-    if (!form.categoryId) e.categoryId = 'Selecciona una categoría';
+    if (!form.accountId) e.accountId = 'Selecciona una cuenta origen';
+    if (form.type === 'transfer') {
+      if (!form.toAccountId) e.toAccountId = 'Selecciona una cuenta destino';
+      if (form.toAccountId && form.toAccountId === form.accountId)
+        e.toAccountId = 'Las cuentas deben ser diferentes';
+    } else {
+      if (!form.categoryId) e.categoryId = 'Selecciona una categoría';
+    }
     if (form.endDate && form.endDate < form.startDate)
       e.endDate = 'La fecha fin debe ser posterior al inicio';
     return e;
@@ -177,6 +185,8 @@ export function Projections() {
     const entry = {
       ...form,
       amount: +form.amount,
+      categoryId: form.type === 'transfer' ? '__transfer__' : form.categoryId,
+      toAccountId: form.type === 'transfer' ? form.toAccountId : undefined,
       isRecurring: form.isRecurring ?? false,
       recurringDay: form.isRecurring
         ? new Date(form.startDate + 'T00:00:00').getDate()
@@ -222,8 +232,9 @@ export function Projections() {
       frequency: proj.frequency,
       startDate: proj.startDate,
       endDate: proj.endDate ?? '',
-      categoryId: proj.categoryId ?? '',
+      categoryId: proj.categoryId === '__transfer__' ? '' : (proj.categoryId ?? ''),
       accountId: proj.accountId ?? accounts[0]?.id ?? '',
+      toAccountId: proj.toAccountId ?? '',
       notes: proj.notes ?? '',
       active: proj.active ?? true,
       isRecurring: proj.isRecurring ?? false,
@@ -667,6 +678,9 @@ export function Projections() {
               {filtered.map((proj) => {
                 const cat = categories.find((c) => c.id === proj.categoryId);
                 const acc = accounts.find((a) => a.id === proj.accountId);
+                const toAcc = proj.toAccountId
+                  ? accounts.find((a) => a.id === proj.toAccountId)
+                  : null;
                 const freq = FREQUENCIES.find(
                   (f) => f.value === proj.frequency
                 );
@@ -715,7 +729,11 @@ export function Projections() {
                               height: '2.75rem',
                               borderRadius: '9999px',
                               background:
-                                proj.type === 'income' ? T.green : T.red,
+                                proj.type === 'income'
+                                  ? T.green
+                                  : proj.type === 'transfer'
+                                  ? T.accent
+                                  : T.red,
                               flexShrink: 0,
                             }}
                           />
@@ -751,12 +769,20 @@ export function Projections() {
                                   background:
                                     proj.type === 'income'
                                       ? T.greenBg
+                                      : proj.type === 'transfer'
+                                      ? T.accentLight
                                       : T.redBg ?? T.amberBg,
                                   color:
-                                    proj.type === 'income' ? T.green : T.red,
+                                    proj.type === 'income'
+                                      ? T.green
+                                      : proj.type === 'transfer'
+                                      ? T.accent
+                                      : T.red,
                                   border: `1px solid ${
                                     proj.type === 'income'
                                       ? T.greenBorder
+                                      : proj.type === 'transfer'
+                                      ? T.accent + '33'
                                       : T.redBorder ?? T.amberBorder
                                   }`,
                                   whiteSpace: 'nowrap',
@@ -764,6 +790,8 @@ export function Projections() {
                               >
                                 {proj.type === 'income'
                                   ? '📈 Ingreso'
+                                  : proj.type === 'transfer'
+                                  ? '↔ Traspaso'
                                   : '📉 Gasto'}
                               </span>
                               {!isActive && (
@@ -792,8 +820,18 @@ export function Projections() {
                                 flexWrap: 'wrap',
                               }}
                             >
-                              {cat && <span>{cat.name}</span>}
-                              {acc && <span>· {acc.name}</span>}
+                              {proj.type === 'transfer' ? (
+                                <>
+                                  <span>{acc?.name ?? '—'}</span>
+                                  <span>→</span>
+                                  <span>{toAcc?.name ?? '—'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  {cat && <span>{cat.name}</span>}
+                                  {acc && <span>· {acc.name}</span>}
+                                </>
+                              )}
                               <span>
                                 ·{' '}
                                 {FREQ_LABELS[proj.frequency] ?? proj.frequency}
@@ -908,15 +946,20 @@ export function Projections() {
 
                         {/* Importe */}
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div
+                        <div
                             style={{
                               fontSize: '1.125rem',
                               fontWeight: 800,
-                              color: proj.type === 'income' ? T.green : T.red,
+                              color:
+                                proj.type === 'income'
+                                  ? T.green
+                                  : proj.type === 'transfer'
+                                  ? T.accent
+                                  : T.red,
                               letterSpacing: '-0.02em',
                             }}
                           >
-                            {proj.type === 'income' ? '+' : '-'}
+                            {proj.type === 'income' ? '+' : proj.type === 'transfer' ? '↔' : '-'}
                             {fmt(
                               proj.amount,
                               proj.currency ?? baseCurrency,
@@ -1821,8 +1864,8 @@ export function Projections() {
                   </div>
                 )}
 
-                {/* Cuenta */}
-                <Field label="Cuenta *" error={errors.accountId}>
+                {/* Cuenta origen */}
+                <Field label={form.type === 'transfer' ? 'Cuenta origen *' : 'Cuenta *'} error={errors.accountId}>
                   <Sel
                     T={T}
                     value={form.accountId}
@@ -1836,85 +1879,84 @@ export function Projections() {
                   >
                     <option value="">— Selecciona una cuenta —</option>
                     {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>
+                      <option key={a.id} value={a.id} disabled={form.type === 'transfer' && a.id === form.toAccountId}>
                         {a.name}
                       </option>
                     ))}
                   </Sel>
                 </Field>
 
+                {/* Cuenta destino — solo para transferencias */}
+                {form.type === 'transfer' && (
+                  <Field label="Cuenta destino *" error={errors.toAccountId}>
+                    <Sel
+                      T={T}
+                      value={form.toAccountId}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                        setForm((f) => ({ ...f, toAccountId: e.target.value }));
+                        setErrors((er) => ({ ...er, toAccountId: undefined as any }));
+                      }}
+                    >
+                      <option value="">— Selecciona una cuenta —</option>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id} disabled={a.id === form.accountId}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </Sel>
+                  </Field>
+                )}
+
                 {/* Tipo */}
                 <Field label="Tipo de movimiento">
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
                       gap: '0.625rem',
                     }}
                   >
-                    {(
-                      [
-                        [
-                          'income',
-                          '📈',
-                          'Ingreso',
-                          T.green,
-                          T.greenBg,
-                          T.greenBorder,
-                        ],
-                        [
-                          'expense',
-                          '📉',
-                          'Gasto',
-                          T.red,
-                          T.redBg ?? T.amberBg,
-                          T.redBorder ?? T.amberBorder,
-                        ],
-                      ] as const
-                    ).map(([val, icon, label, color, bg, border]) => (
+                    {[
+                      { val: 'income'   as const, icon: '📈', label: 'Ingreso',       color: T.green,  bg: T.greenBg,            border: T.greenBorder },
+                      { val: 'expense'  as const, icon: '📉', label: 'Gasto',         color: T.red,    bg: T.redBg ?? T.amberBg, border: T.redBorder ?? T.amberBorder },
+                      { val: 'transfer' as const, icon: '↔',  label: 'Traspaso entre cuentas', color: T.accent, bg: T.accentLight,        border: T.accent + '33' },
+                    ].map(({ val, icon, label, color, bg }) => (
                       <div
                         key={val}
                         onClick={() =>
-                          setForm((f) => ({ ...f, type: val, categoryId: '' }))
+                          setForm((f) => ({
+                            ...f,
+                            type: val,
+                            categoryId: '',
+                            toAccountId: val !== 'transfer' ? '' : f.toAccountId,
+                          }))
                         }
                         style={{
-                          padding: '1rem',
+                          padding: '0.875rem 0.5rem',
                           borderRadius: '0.875rem',
                           cursor: 'pointer',
-                          border: `2px solid ${
-                            form.type === val ? color : T.cardBorder
-                          }`,
+                          border: `2px solid ${form.type === val ? color : T.cardBorder}`,
                           background: form.type === val ? bg : T.pageBg,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.625rem',
+                          flexDirection: 'column',
+                          gap: '0.375rem',
                           transition: 'all 0.15s',
+                          textAlign: 'center',
                         }}
                       >
                         <span style={{ fontSize: '1.25rem' }}>{icon}</span>
-                        <span
-                          style={{
-                            fontSize: '0.875rem',
-                            fontWeight: 700,
-                            color: form.type === val ? color : T.muted,
-                          }}
-                        >
+                        <span style={{ fontSize: '0.775rem', fontWeight: 700, color: form.type === val ? color : T.muted }}>
                           {label}
                         </span>
-                        {form.type === val && (
-                          <Check
-                            size={14}
-                            color={color}
-                            style={{ marginLeft: 'auto' }}
-                          />
-                        )}
+                        {form.type === val && <Check size={12} color={color} />}
                       </div>
                     ))}
                   </div>
                 </Field>
 
-                {/* Categoría */}
-                <Field label="Categoría *" error={errors.categoryId}>
+                {/* Categoría — oculta para transferencias */}
+                {form.type !== 'transfer' && (<Field label="Categoría *" error={errors.categoryId}>
                   <div
                     style={{
                       display: 'flex',
@@ -1986,12 +2028,12 @@ export function Projections() {
                       Créala con el botón <strong>+</strong>.
                     </div>
                   )}
-                </Field>
+                </Field>)}
 
-                {showQuickCategory && (
+                {form.type !== 'transfer' && showQuickCategory && (
                   <QuickCategoryModal
                     T={T}
-                    defaultType={form.type}
+                    defaultType={form.type as 'income' | 'expense'}
                     onSave={(newCat) => {
                       setForm((f) => ({ ...f, categoryId: newCat.id }));
                       setShowQuickCategory(false);

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { useApp } from '../AppContext';
 import { useToast } from '../contexts/ToastContext';
-import type { SavingsGoal } from '../types'; // ✅ FIX — importar desde types.ts
+import type { SavingsGoal } from '../types';
 import {
   calcGoalProgress,
   convertAmount,
@@ -46,7 +46,6 @@ const GOAL_EMOJIS = [
   '🍀',
   '💎',
 ];
-
 const GOAL_COLORS = [
   '#2563eb',
   '#16a34a',
@@ -59,7 +58,6 @@ const GOAL_COLORS = [
   '#0d9488',
   '#4f46e5',
 ];
-
 const uid = () => crypto.randomUUID();
 
 // ─── GoalCard ─────────────────────────────────────────────────────────────────
@@ -72,14 +70,11 @@ function GoalCard({
   onEdit: (goal: SavingsGoal) => void;
   onDelete: (id: string) => void;
 }) {
-  const { T, accounts, categories, realExpenses, rates, setGoals, dateFormat } =
-    useApp();
+  const { T, accounts, categories, realExpenses, rates, setGoals } = useApp();
   const toast = useToast();
-
   const prog = calcGoalProgress(goal, realExpenses, accounts, rates);
   const cat = categories.find((c) => c.id === goal.categoryId);
   const acc = accounts.find((a) => a.id === goal.accountId);
-
   const [editingAmount, setEditingAmount] = useState(false);
   const [editingAmountValue, setEditingAmountValue] = useState('');
 
@@ -97,6 +92,16 @@ function GoalCard({
     setEditingAmountValue('');
   };
 
+  const catLabel =
+    goal.categoryId === '__transfer__' ? (
+      <span>↔ Traspasos</span>
+    ) : cat ? (
+      <span>{cat.name}</span>
+    ) : null;
+
+  const accLabel =
+    goal.accountId !== 'all' && acc ? <span>· {acc.name}</span> : null;
+
   return (
     <Card
       T={T}
@@ -108,7 +113,6 @@ function GoalCard({
           : `1px solid ${T.cardBorder}`,
       }}
     >
-      {/* Barra de color lateral */}
       <div
         style={{
           position: 'absolute',
@@ -119,7 +123,6 @@ function GoalCard({
           background: goal.color,
         }}
       />
-
       <div style={{ padding: '1.5rem 1.5rem 1.5rem 1.875rem' }}>
         {/* Cabecera */}
         <div
@@ -163,10 +166,8 @@ function GoalCard({
                     >
                       ⚡ Auto
                     </span>
-                    {cat && <span>{cat.name}</span>}
-                    {goal.accountId !== 'all' && acc && (
-                      <span>· {acc.name}</span>
-                    )}
+                    {catLabel}
+                    {accLabel}
                   </>
                 ) : (
                   <span
@@ -194,7 +195,7 @@ function GoalCard({
           </div>
         </div>
 
-        {/* Progreso */}
+        {/* Barra de progreso */}
         <div style={{ marginBottom: '1rem' }}>
           <div
             style={{
@@ -241,7 +242,6 @@ function GoalCard({
               {Math.round(prog.pct)}%
             </div>
           </div>
-
           <div
             style={{
               height: '0.75rem',
@@ -281,7 +281,6 @@ function GoalCard({
               )}
             </div>
           </div>
-
           {prog.completed && (
             <div
               style={{
@@ -373,7 +372,7 @@ function GoalCard({
           </div>
         )}
 
-        {/* Ritmo — solo modo auto */}
+        {/* Ritmo auto */}
         {goal.mode === 'auto' && prog.monthlyRate > 0 && !prog.completed && (
           <div
             style={{
@@ -475,7 +474,7 @@ function GoalCard({
             </div>
           )}
 
-        {/* Botón actualizar — solo modo manual */}
+        {/* Botón actualizar manual */}
         {goal.mode === 'manual' && !prog.completed && (
           <button
             onClick={() => setEditingAmount(true)}
@@ -623,10 +622,7 @@ export function Goals() {
     dateFormat,
     setTab,
   } = useApp();
-
   const toast = useToast();
-
-  // ── Coach Mark ────────────────────────────────────────────────────────────
   const { seen: coachSeen, markSeen: coachMarkSeen } = useCoachMark('goals');
   const coachRef = useRef<HTMLDivElement>(null);
 
@@ -635,7 +631,6 @@ export function Goals() {
   const [step, setStep] = useState(1);
   const [showQuickCategory, setShowQuickCategory] = useState(false);
   const [showFirstWin, setShowFirstWin] = useState(false);
-
   const TOTAL_STEPS = 3;
 
   const emptyForm: Omit<SavingsGoal, 'id'> = {
@@ -665,7 +660,7 @@ export function Goals() {
     }
     if (s === 2 && form.mode === 'auto') {
       if (!form.categoryId) e.categoryId = 'Selecciona una categoría';
-      if (!form.accountId)  e.accountId  = 'Selecciona una cuenta';
+      if (!form.accountId) e.accountId = 'Selecciona una cuenta';
     }
     return e;
   };
@@ -728,7 +723,6 @@ export function Goals() {
     setErrors({});
   };
 
-  // ── Resumen global ─────────────────────────────────────────────────────────
   const globalStats = useMemo(() => {
     const total = goals.length;
     const completed = goals.filter(
@@ -760,7 +754,9 @@ export function Goals() {
     );
     if (globalStats.completed > 0)
       parts.push(
-        `${globalStats.completed} completado${globalStats.completed !== 1 ? 's' : ''}`
+        `${globalStats.completed} completado${
+          globalStats.completed !== 1 ? 's' : ''
+        }`
       );
     parts.push(
       fmt(globalStats.totalSaved, displayCurrency, displayCurrency, rates) +
@@ -769,7 +765,7 @@ export function Goals() {
     return parts.join(' · ');
   }, [globalStats, displayCurrency, rates]);
 
-  // ── Paso 1: nombre, emoji, meta ────────────────────────────────────────────
+  // ── Paso 1 ────────────────────────────────────────────────────────────────
   const renderStep1 = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <Field label="Elige un icono">
@@ -884,7 +880,7 @@ export function Goals() {
           value={form.deadline}
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
             setForm((f) => ({ ...f, deadline: e.target.value }))
-            }
+          }
         />
       </Field>
 
@@ -928,11 +924,254 @@ export function Goals() {
     </div>
   );
 
-  // ── Paso 2: modo manual vs automático ──────────────────────────────────────
+  // ── Paso 2 ────────────────────────────────────────────────────────────────
   const renderStep2 = () => {
-    // ✅ FIX UX — categorías disponibles para el tipo seleccionado
     const availableCategories = categories.filter(
       (c) => c.type === form.autoType
+    );
+    const isTransfer = form.categoryId === '__transfer__';
+
+    // Proyección mensual calculada como variable (evita && JSX que OXC no parsea)
+    let projMonths = 0;
+    let projMonthly = 0;
+    let hasProjection = false;
+    if (form.targetAmount > 0 && form.deadline) {
+      const now = new Date();
+      const end = new Date(form.deadline);
+      projMonths = Math.max(
+        1,
+        Math.round(
+          (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+        )
+      );
+      const remaining = Math.max(
+        0,
+        form.targetAmount - (form.currentAmount ?? 0)
+      );
+      projMonthly = remaining / projMonths;
+      hasProjection = true;
+    }
+
+    const projectionBlock = hasProjection ? (
+      <div
+        style={{
+          padding: '0.875rem 1rem',
+          borderRadius: '0.875rem',
+          background: T.accentLight,
+          border: `1px solid ${T.accent}33`,
+          fontSize: '0.775rem',
+          color: T.accent,
+          lineHeight: 1.6,
+        }}
+      >
+        <strong>📊 Proyección:</strong> Para alcanzar{' '}
+        <strong>
+          {fmt(form.targetAmount, form.currency, form.currency, rates)}
+        </strong>{' '}
+        en{' '}
+        <strong>
+          {projMonths} mes{projMonths !== 1 ? 'es' : ''}
+        </strong>
+        , necesitarás ahorrar{' '}
+        <strong>
+          {fmt(projMonthly, form.currency, form.currency, rates)}/mes
+        </strong>
+        .
+        {!form.deadline &&
+          ' Añade una fecha límite en el paso 1 para ver la proyección.'}
+      </div>
+    ) : (
+      <div
+        style={{
+          padding: '0.875rem 1rem',
+          borderRadius: '0.875rem',
+          background: T.pageBg,
+          border: `1px solid ${T.cardBorder}`,
+          fontSize: '0.775rem',
+          color: T.muted,
+          lineHeight: 1.6,
+        }}
+      >
+        📊 Añade un importe y fecha límite en el paso 1 para ver la proyección
+        mensual.
+      </div>
+    );
+
+    const categoryBlock = isTransfer ? null : (
+      <Field label="Categoría que se sumará" error={errors.categoryId}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <Sel
+              T={T}
+              value={form.categoryId}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                setForm((f) => ({ ...f, categoryId: e.target.value }));
+                setErrors((er) => ({ ...er, categoryId: undefined as any }));
+              }}
+            >
+              <option value="">— Selecciona una categoría —</option>
+              {availableCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Sel>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQuickCategory(true)}
+            style={{
+              padding: '0.65rem 0.75rem',
+              borderRadius: '0.75rem',
+              border: `1.5px solid ${T.accent}44`,
+              background: T.accentLight,
+              color: T.accent,
+              fontSize: '1rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
+            +
+          </button>
+        </div>
+      </Field>
+    );
+
+    const quickCatBlock =
+      !isTransfer && showQuickCategory ? (
+        <QuickCategoryModal
+          T={T}
+          defaultType={form.autoType as 'income' | 'expense'}
+          onSave={(newCat) => {
+            setForm((f) => ({ ...f, categoryId: newCat.id }));
+            setShowQuickCategory(false);
+          }}
+          onClose={() => setShowQuickCategory(false)}
+        />
+      ) : null;
+
+    const noCatsBlock =
+      !isTransfer && availableCategories.length === 0 ? (
+        <div
+          style={{
+            padding: '0.75rem 1rem',
+            borderRadius: '0.75rem',
+            background: T.amberBg,
+            border: `1px solid ${T.amberBorder}`,
+            fontSize: '0.775rem',
+            color: T.amber,
+            lineHeight: 1.5,
+          }}
+        >
+          ⚠️ No tienes categorías de{' '}
+          {form.autoType === 'income' ? 'ingresos' : 'gastos'} creadas. Crea una
+          con el botón <strong>"+"</strong> o usa el modo{' '}
+          <strong>Manual</strong>.
+        </div>
+      ) : null;
+
+    const transferInfoBlock = isTransfer ? (
+      <div
+        style={{
+          padding: '0.875rem 1rem',
+          borderRadius: '0.875rem',
+          background: T.accentLight,
+          border: `1px solid ${T.accent}33`,
+          fontSize: '0.775rem',
+          color: T.accent,
+          lineHeight: 1.5,
+        }}
+      >
+        ↔ Se contabilizarán automáticamente los traspasos que lleguen a la
+        cuenta seleccionada como progreso hacia tu objetivo.
+      </div>
+    ) : null;
+
+    const accountBlock = isTransfer ? (
+      <div
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}
+      >
+        <Field label="Cuenta origen (opcional)">
+          <Sel
+            T={T}
+            value={form.fromAccountId ?? ''}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              setForm((f) => ({ ...f, fromAccountId: e.target.value }))
+            }
+          >
+            <option value="">— Cualquier cuenta —</option>
+            {accounts
+              .filter((a) => a.id !== form.accountId)
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+          </Sel>
+          <div
+            style={{
+              marginTop: '0.375rem',
+              fontSize: '0.68rem',
+              color: T.muted,
+              lineHeight: 1.5,
+            }}
+          >
+            Deja en blanco para contar traspasos de cualquier origen.
+          </div>
+        </Field>
+        <Field
+          label="Cuenta destino (donde llega el ahorro) *"
+          error={errors.accountId}
+        >
+          <Sel
+            T={T}
+            value={form.accountId}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+              setForm((f) => ({ ...f, accountId: e.target.value }));
+              setErrors((er) => ({ ...er, accountId: undefined as any }));
+            }}
+          >
+            <option value="">— Selecciona una cuenta —</option>
+            {accounts
+              .filter((a) => a.id !== (form.fromAccountId ?? ''))
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+          </Sel>
+          <div
+            style={{
+              marginTop: '0.375rem',
+              fontSize: '0.68rem',
+              color: T.muted,
+              lineHeight: 1.5,
+            }}
+          >
+            El progreso se calcula con los traspasos que lleguen aquí.
+          </div>
+        </Field>
+      </div>
+    ) : (
+      <Field label="Cuenta *" error={errors.accountId}>
+        <Sel
+          T={T}
+          value={form.accountId}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+            setForm((f) => ({ ...f, accountId: e.target.value }));
+            setErrors((er) => ({ ...er, accountId: undefined as any }));
+          }}
+        >
+          <option value="">— Selecciona una cuenta —</option>
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </Sel>
+      </Field>
     );
 
     return (
@@ -1063,7 +1302,6 @@ export function Goals() {
               gap: '0.875rem',
             }}
           >
-            {/* Tipo de movimiento */}
             <div>
               <div
                 style={{
@@ -1077,130 +1315,98 @@ export function Goals() {
               >
                 Tipo de movimiento a sumar
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
-                {([
-                  ['income',  '📈', 'Ingresos', T.green, T.greenBg,            T.greenBorder],
-                  ['expense', '📉', 'Gastos',   T.red,   T.redBg ?? T.amberBg, T.redBorder ?? T.amberBorder],
-                ] as const).map(([val, icon, label, color, bg]) => (
-                  <div
-                    key={val}
-                    onClick={() => setForm((f) => ({ ...f, autoType: val, categoryId: '' }))}
-                    style={{
-                      padding: '1rem',
-                      borderRadius: '0.875rem',
-                      cursor: 'pointer',
-                      border: `2px solid ${form.autoType === val ? color : T.cardBorder}`,
-                      background: form.autoType === val ? bg : T.pageBg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.625rem',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    <span style={{ fontSize: '1.25rem' }}>{icon}</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: form.autoType === val ? color : T.muted }}>
-                      {label}
-                    </span>
-                    {form.autoType === val && <Check size={14} color={color} style={{ marginLeft: 'auto' }} />}
-                  </div>
-                ))}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '0.625rem',
+                }}
+              >
+                {[
+                  {
+                    val: 'income' as const,
+                    icon: '📈',
+                    label: 'Ingresos',
+                    color: T.green,
+                    bg: T.greenBg,
+                    isTr: false,
+                  },
+                  {
+                    val: 'expense' as const,
+                    icon: '📉',
+                    label: 'Gastos',
+                    color: T.red,
+                    bg: T.redBg ?? T.amberBg,
+                    isTr: false,
+                  },
+                  {
+                    val: 'transfer' as const,
+                    icon: '↔',
+                    label: 'Traspaso entre cuentas',
+                    color: T.accent,
+                    bg: T.accentLight,
+                    isTr: true,
+                  },
+                ].map(({ val, icon, label, color, bg, isTr }) => {
+                  const isActive = isTr
+                    ? form.categoryId === '__transfer__'
+                    : form.autoType === val &&
+                      form.categoryId !== '__transfer__';
+                  return (
+                    <div
+                      key={val}
+                      onClick={() => {
+                        if (isTr) {
+                          setForm((f) => ({
+                            ...f,
+                            autoType: 'income',
+                            categoryId: '__transfer__',
+                          }));
+                        } else {
+                          setForm((f) => ({
+                            ...f,
+                            autoType: val as 'income' | 'expense',
+                            categoryId: '',
+                          }));
+                        }
+                      }}
+                      style={{
+                        padding: '0.875rem 0.5rem',
+                        borderRadius: '0.875rem',
+                        cursor: 'pointer',
+                        border: `2px solid ${isActive ? color : T.cardBorder}`,
+                        background: isActive ? bg : T.pageBg,
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexDirection: 'column',
+                        gap: '0.375rem',
+                        transition: 'all 0.15s',
+                        textAlign: 'center' as const,
+                      }}
+                    >
+                      <span style={{ fontSize: '1.25rem' }}>{icon}</span>
+                      <span
+                        style={{
+                          fontSize: '0.775rem',
+                          fontWeight: 700,
+                          color: isActive ? color : T.muted,
+                        }}
+                      >
+                        {label}
+                      </span>
+                      {isActive && <Check size={12} color={color} />}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* ✅ FIX UX — aviso si no hay categorías del tipo seleccionado */}
-            {availableCategories.length === 0 && (
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  borderRadius: '0.75rem',
-                  background: T.amberBg,
-                  border: `1px solid ${T.amberBorder}`,
-                  fontSize: '0.775rem',
-                  color: T.amber,
-                  lineHeight: 1.5,
-                }}
-              >
-                ⚠️ No tienes categorías de{' '}
-                {form.autoType === 'income' ? 'ingresos' : 'gastos'} creadas.
-                Crea una con el botón <strong>"+"</strong> o usa el modo{' '}
-                <strong>Manual</strong>.
-              </div>
-            )}
-
-            <Field label="Categoría que se sumará" error={errors.categoryId}>
-              <div
-                style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
-              >
-                <div style={{ flex: 1 }}>
-                  <Sel
-                    T={T}
-                    value={form.categoryId}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                      setForm((f) => ({ ...f, categoryId: e.target.value }));
-                      setErrors((er) => ({
-                        ...er,
-                        categoryId: undefined as any,
-                      }));
-                    }}
-                  >
-                    <option value="">— Selecciona una categoría —</option>
-                    {availableCategories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Sel>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickCategory(true)}
-                  style={{
-                    padding: '0.65rem 0.75rem',
-                    borderRadius: '0.75rem',
-                    border: `1.5px solid ${T.accent}44`,
-                    background: T.accentLight,
-                    color: T.accent,
-                    fontSize: '1rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    lineHeight: 1,
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            </Field>
-
-            {showQuickCategory && (
-              <QuickCategoryModal
-                T={T}
-                defaultType={form.autoType as 'income' | 'expense'}
-                onSave={(newCat) => {
-                  setForm((f) => ({ ...f, categoryId: newCat.id }));
-                  setShowQuickCategory(false);
-                }}
-                onClose={() => setShowQuickCategory(false)}
-              />
-            )}
-
-<Field label="Cuenta" error={errors.accountId}>
-              <Sel
-                T={T}
-                value={form.accountId}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                  setForm((f) => ({ ...f, accountId: e.target.value }));
-                  setErrors((er) => ({ ...er, accountId: undefined as any }));
-                }}
-              >
-                <option value="">— Selecciona una cuenta —</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Sel>
-            </Field>
+            {transferInfoBlock}
+            {noCatsBlock}
+            {categoryBlock}
+            {quickCatBlock}
+            {accountBlock}
+            {projectionBlock}
 
             <Field label="Contar movimientos desde">
               <Input
@@ -1209,7 +1415,7 @@ export function Goals() {
                 value={form.autoStartDate}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setForm((f) => ({ ...f, autoStartDate: e.target.value }))
-                  }
+                }
               />
             </Field>
 
@@ -1234,231 +1440,136 @@ export function Goals() {
     );
   };
 
-  // ── Paso 3: resumen ────────────────────────────────────────────────────────
+  // ── Paso 3 ────────────────────────────────────────────────────────────────
   const renderStep3 = () => {
-    const cat = categories.find((c) => c.id === form.categoryId);
     const acc = accounts.find((a) => a.id === form.accountId);
-    const progress =
-      form.mode === 'manual' && form.targetAmount > 0
-        ? (form.currentAmount / form.targetAmount) * 100
-        : 0;
-
+    const cat = categories.find((c) => c.id === form.categoryId);
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div
           style={{
-            padding: '1.5rem',
-            borderRadius: '1.25rem',
-            background: T.pageBg,
-            border: `2px solid ${form.color}44`,
-            position: 'relative',
-            overflow: 'hidden',
+            padding: '1.25rem',
+            borderRadius: '1rem',
+            background: T.accentLight,
+            border: `1.5px solid ${form.color}33`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
           }}
         >
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: '0.375rem',
-              background: form.color,
-              borderRadius: '0.375rem 0 0 0.375rem',
-            }}
-          />
-          <div style={{ marginLeft: '1rem' }}>
+          <span style={{ fontSize: '2.5rem' }}>{form.emoji}</span>
+          <div style={{ flex: 1 }}>
+            <div
+              style={{ fontSize: '1.1rem', fontWeight: 800, color: T.title }}
+            >
+              {form.name}
+            </div>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '1rem',
+                fontSize: '0.8rem',
+                color: T.muted,
+                marginTop: '0.2rem',
               }}
             >
-              <span style={{ fontSize: '2rem' }}>{form.emoji}</span>
-              <div>
-                <div
-                  style={{
-                    fontSize: '1.05rem',
-                    fontWeight: 800,
-                    color: T.title,
-                  }}
-                >
-                  {form.name}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: T.muted }}>
-                  {form.mode === 'manual'
-                    ? '✍️ Seguimiento manual'
-                    : `⚡ Auto · ${cat?.name ?? '—'}`}
-                </div>
-              </div>
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
-                  background: form.color + '22',
-                  color: form.color,
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                }}
-              >
-                {form.mode === 'manual' ? 'Manual' : 'Automático'}
-              </div>
-            </div>
-
-            {/* Barra de progreso resumen */}
-            <div style={{ marginBottom: '0.625rem' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '0.4rem',
-                }}
-              >
-                <span style={{ fontSize: '0.72rem', color: T.muted }}>
-                  {fmt(
-                    form.mode === 'manual' ? form.currentAmount : 0,
-                    form.currency,
-                    form.currency,
-                    rates
-                  )}{' '}
-                  ahorrado
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    color: form.color,
-                  }}
-                >
-                  {Math.round(Math.min(progress, 100))}%
-                </span>
-              </div>
-              <div
-                style={{
-                  height: '0.625rem',
-                  borderRadius: '9999px',
-                  background: T.cardBorder,
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    borderRadius: '9999px',
-                    background: form.color,
-                    width: `${Math.min(progress, 100)}%`,
-                    transition: 'width 0.5s ease',
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginTop: '0.3rem',
-                }}
-              >
-                <span style={{ fontSize: '0.68rem', color: T.muted }}>
-                  Inicio
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    color: T.title,
-                  }}
-                >
-                  {fmt(form.targetAmount, form.currency, form.currency, rates)}
-                </span>
-              </div>
-            </div>
-
-            {/* Detalle */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '0.5rem',
-              }}
-            >
-              {[
-                {
-                  label: 'Meta',
-                  value: fmt(
-                    form.targetAmount,
-                    form.currency,
-                    form.currency,
-                    rates
-                  ),
-                },
-                {
-                  label: 'Fecha límite',
-                  value: form.deadline
-                    ? fmtDateShort(form.deadline, dateFormat)
-                    : 'Sin límite',
-                },
-                ...(form.mode === 'auto'
-                  ? [
-                      { label: 'Categoría', value: cat?.name ?? '—' },
-                      {
-                        label: 'Cuenta',
-                        value: acc?.name ?? '—',
-                      },
-                    ]
-                  : []),
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.625rem',
-                    background: T.cardBg,
-                    border: `1px solid ${T.cardBorder}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '0.62rem',
-                      color: T.muted,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    {item.label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      color: T.title,
-                    }}
-                  >
-                    {item.value}
-                  </div>
-                </div>
-              ))}
+              Meta:{' '}
+              <strong>
+                {fmt(form.targetAmount, form.currency, form.currency, rates)}
+              </strong>
+              {form.deadline &&
+                ` · Límite: ${fmtDateShort(form.deadline, dateFormat)}`}
             </div>
           </div>
+          <div
+            style={{
+              width: '0.75rem',
+              height: '3rem',
+              borderRadius: '9999px',
+              background: form.color,
+              flexShrink: 0,
+            }}
+          />
         </div>
 
         <div
           style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '0.75rem',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.75rem',
+          }}
+        >
+          {[
+            {
+              label: 'Modo',
+              value: form.mode === 'manual' ? '✍️ Manual' : '⚡ Automático',
+            },
+            { label: 'Divisa', value: form.currency },
+            {
+              label: form.mode === 'auto' ? 'Tipo' : 'Ahorrado',
+              value:
+                form.mode === 'auto'
+                  ? form.categoryId === '__transfer__'
+                  ? '↔ Traspaso entre cuentas'
+                  : cat?.name ?? '—'
+                  : fmt(
+                      form.currentAmount,
+                      form.currency,
+                      form.currency,
+                      rates
+                    ),
+            },
+            {
+              label: 'Cuenta',
+              value:
+                acc?.name ??
+                (form.categoryId === '__transfer__' ? 'Traspaso entre cuentas' : '—'),
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              style={{
+                padding: '0.875rem 1rem',
+                borderRadius: '0.875rem',
+                background: T.pageBg,
+                border: `1px solid ${T.cardBorder}`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.6rem',
+                  fontWeight: 700,
+                  color: T.muted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: '0.25rem',
+                }}
+              >
+                {item.label}
+              </div>
+              <div
+                style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: T.title,
+                }}
+              >
+                {item.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            padding: '0.875rem 1rem',
+            borderRadius: '0.875rem',
             background: T.greenBg,
             border: `1px solid ${T.greenBorder}`,
             fontSize: '0.775rem',
             color: T.green,
-            fontWeight: 600,
+            lineHeight: 1.5,
           }}
         >
-          ✅ Todo listo. Pulsa "
-          {modal === 'add' ? 'Crear objetivo' : 'Guardar cambios'}" para
-          continuar.
+          ✅ Todo listo. Pulsa <strong>Guardar</strong> para crear tu objetivo.
         </div>
       </div>
     );
@@ -1466,110 +1577,57 @@ export function Goals() {
 
   // ── Render principal ───────────────────────────────────────────────────────
   return (
-    <div className="fh-print-section">
-      {/* ── Cabecera documento (solo impresión) ── */}
-      <PrintHeader
-        title="Objetivos de Ahorro"
-        subtitle={printSubtitle}
-      />
+    <div className="fh-print-section" style={{ padding: '1.5rem 1rem' }}>
+      <PrintHeader title="Objetivos de ahorro" subtitle={printSubtitle} />
 
-      {/* Cabecera */}
-      <div
-        className="fh-no-print"
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginBottom: '2rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
+      <div className="fh-no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
-          <div
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              color: T.muted,
-              textTransform: 'uppercase',
-              marginBottom: '0.4rem',
-            }}
-          >
-            Planificación
-          </div>
-          <h2
-            style={{
-              fontSize: '2rem',
-              fontWeight: 800,
-              color: T.title,
-              letterSpacing: '-0.04em',
-              margin: 0,
-            }}
-          >
-            Objetivos de ahorro
-          </h2>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.title, margin: 0 }}>🎯 Objetivos</h1>
           <p
-            style={{ fontSize: '0.9rem', color: T.muted, marginTop: '0.4rem' }}
+            style={{
+              fontSize: '0.825rem',
+              color: T.muted,
+              margin: '0.25rem 0 0',
+            }}
           >
-            Define metas y sigue tu progreso automáticamente
+            {globalStats.total === 0
+              ? 'Crea tu primer objetivo de ahorro'
+              : `${globalStats.total} objetivo${
+                  globalStats.total !== 1 ? 's' : ''
+                } · ${globalStats.completed} completado${
+                  globalStats.completed !== 1 ? 's' : ''
+                }`}
           </p>
         </div>
-        <div
-          className="fh-no-print"
-          style={{ display: 'flex', gap: '0.75rem' }}
-        >
-          <PrintButton
-            T={T}
-            documentTitle="Objetivos_de_Ahorro"
-            sectionTitle="Objetivos de Ahorro"
-            subtitle={printSubtitle}
-          />
-          <div ref={coachRef} style={{ display: 'inline-flex' }}>
-            <PrimaryBtn onClick={openAdd}>
-              <Plus size={15} />
-              Nuevo objetivo
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <PrintButton T={T} documentTitle="Objetivos de ahorro" sectionTitle="Objetivos de ahorro" subtitle={printSubtitle} />
+        <div ref={coachRef} style={{ display: 'inline-block' }}>
+            <PrimaryBtn onClick={openAdd} T={T}>
+              <Plus size={16} /> Nuevo objetivo
             </PrimaryBtn>
           </div>
         </div>
       </div>
 
-      {/* Resumen global */}
       {goals.length > 0 && (
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '1rem',
-            marginBottom: '1.75rem',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '0.75rem',
+            marginBottom: '1.5rem',
           }}
         >
           {[
             {
-              label: 'Objetivos activos',
-              value: `${globalStats.total}`,
+              label: 'Total objetivos',
+              value: String(globalStats.total),
               color: T.accent,
-              bg: T.accentLight,
-              border: `${T.accent}33`,
             },
             {
               label: 'Completados',
-              value: `${globalStats.completed}`,
+              value: String(globalStats.completed),
               color: T.green,
-              bg: T.greenBg,
-              border: T.greenBorder,
-            },
-            {
-              label: 'Total objetivo',
-              value: fmt(
-                globalStats.totalTarget,
-                displayCurrency,
-                displayCurrency,
-                rates
-              ),
-              color: T.muted,
-              bg: T.pageBg,
-              border: T.cardBorder,
             },
             {
               label: 'Total ahorrado',
@@ -1579,38 +1637,36 @@ export function Goals() {
                 displayCurrency,
                 rates
               ),
-              color: T.green,
-              bg: T.greenBg,
-              border: T.greenBorder,
+              color: T.title,
             },
           ].map((item) => (
             <div
               key={item.label}
               style={{
-                padding: '1rem 1.25rem',
+                padding: '1rem',
                 borderRadius: '1rem',
-                background: item.bg,
-                border: `1px solid ${item.border}`,
+                background: T.cardBg,
+                border: `1px solid ${T.cardBorder}`,
+                textAlign: 'center',
               }}
             >
               <div
                 style={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.6rem',
                   fontWeight: 700,
-                  color: item.color,
+                  color: T.muted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
-                  marginBottom: '0.35rem',
+                  marginBottom: '0.375rem',
                 }}
               >
                 {item.label}
               </div>
               <div
                 style={{
-                  fontSize: '1.25rem',
+                  fontSize: '1.1rem',
                   fontWeight: 800,
                   color: item.color,
-                  letterSpacing: '-0.02em',
                 }}
               >
                 {item.value}
@@ -1620,13 +1676,43 @@ export function Goals() {
         </div>
       )}
 
-      {/* Grid de objetivos */}
-      {goals.length > 0 ? (
+{!coachSeen && goals.length === 0 && (
+        <CoachMark
+          targetRef={coachRef}
+          title="¡Empieza a ahorrar!"
+          description="Pulsa aquí para crear tu primer objetivo. La app calculará automáticamente cuánto necesitas ahorrar cada mes para llegar a tiempo."
+          onDismiss={coachMarkSeen}
+        />
+      )}
+
+      {goals.length === 0 ? (
+        <div
+          style={{ textAlign: 'center', padding: '4rem 2rem', color: T.muted }}
+        >
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
+          <div
+            style={{
+              fontSize: '1rem',
+              fontWeight: 700,
+              color: T.title,
+              marginBottom: '0.5rem',
+            }}
+          >
+            Sin objetivos todavía
+          </div>
+          <div style={{ fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            Crea tu primer objetivo para empezar a ahorrar con propósito.
+          </div>
+          <PrimaryBtn onClick={openAdd} T={T}>
+            <Plus size={16} /> Crear objetivo
+          </PrimaryBtn>
+        </div>
+      ) : (
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(22rem, 1fr))',
-            gap: '1.25rem',
+            gap: '1rem',
           }}
         >
           {goals.map((goal) => (
@@ -1634,209 +1720,135 @@ export function Goals() {
               key={goal.id}
               goal={goal}
               onEdit={openEdit}
-              onDelete={setConfirmDelete}
+              onDelete={(id) => setConfirmDelete(id)}
             />
           ))}
         </div>
-      ) : (
-        <div
-          style={{ textAlign: 'center', padding: '6rem 2rem', color: T.muted }}
-        >
-          <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.4 }}>
-            🎯
-          </div>
-          <p
-            style={{
-              fontSize: '1.125rem',
-              fontWeight: 800,
-              color: T.title,
-              marginBottom: '0.5rem',
-            }}
-          >
-            Todavía no tienes objetivos de ahorro
-          </p>
-          <p
-            style={{
-              fontSize: '0.875rem',
-              color: T.muted,
-              marginBottom: '1.5rem',
-              maxWidth: '28rem',
-              margin: '0 auto 1.5rem',
-            }}
-          >
-            Define una meta, elige si quieres seguirla manualmente o de forma
-            automática vinculándola a tus movimientos reales.
-          </p>
-          <PrimaryBtn onClick={openAdd}>
-            <Plus size={15} />
-            Crear primer objetivo
-          </PrimaryBtn>
-        </div>
       )}
 
-      {/* Modal creación / edición */}
-      {modal &&
+<PrintFooter section="Objetivos de ahorro" />
+
+      {modal !== null &&
         createPortal(
           <div
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 99999,
+              zIndex: 1000,
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-end',
               justifyContent: 'center',
-              padding: '1rem',
-              background: 'rgba(0,0,0,0.75)',
-              backdropFilter: 'blur(8px)',
-              overflowY: 'auto',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeModal();
             }}
           >
             <div
               style={{
-                background: T.cardBg,
-                border: `1px solid ${T.cardBorder}`,
-                borderRadius: '1.5rem',
-                boxShadow: T.cardShadowLg,
                 width: '100%',
-                maxWidth: '36rem',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                animation: 'fadeSlideIn 0.2s ease both',
+                maxWidth: '32rem',
+                maxHeight: '92vh',
+                overflow: 'auto',
+                background: T.cardBg,
+                borderRadius: '1.5rem 1.5rem 0 0',
+                padding: '1.5rem',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
               }}
             >
-              {/* Cabecera sticky */}
               <div
                 style={{
-                  padding: '1rem 1.5rem 0.75rem',
-                  borderBottom: `1px solid ${T.cardBorder}`,
-                  position: 'sticky',
-                  top: 0,
-                  background: T.cardBg,
-                  zIndex: 1,
-                  borderRadius: '1.5rem 1.5rem 0 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.25rem',
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.375rem',
-                    marginBottom: '0.875rem',
-                  }}
-                >
-                  {[1, 2, 3].map((s) => (
-                    <div
-                      key={s}
-                      style={{
-                        flex: 1,
-                        height: '0.25rem',
-                        borderRadius: '9999px',
-                        background: s <= step ? T.accent : T.cardBorder,
-                        transition: 'background 0.3s',
-                      }}
-                    />
-                  ))}
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                  }}
-                >
-                  <div>
-                    <h2
-                      style={{
-                        fontSize: '1.25rem',
-                        fontWeight: 700,
-                        color: T.title,
-                        letterSpacing: '-0.02em',
-                        margin: 0,
-                      }}
-                    >
-                      {modal === 'add' ? 'Nuevo objetivo' : 'Editar objetivo'}
-                    </h2>
-                    <p
-                      style={{
-                        fontSize: '0.8rem',
-                        color: T.muted,
-                        marginTop: '0.25rem',
-                      }}
-                    >
-                      Paso {step} de {TOTAL_STEPS} —{' '}
-                      {step === 1
-                        ? 'Nombre y meta'
-                        : step === 2
-                        ? 'Seguimiento'
-                        : 'Resumen'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={closeModal}
+                <div>
+                  <div
                     style={{
-                      padding: '0.4rem',
-                      borderRadius: '0.625rem',
-                      border: 'none',
-                      background: T.btnSecBg,
-                      color: T.muted,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      flexShrink: 0,
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                      color: T.title,
                     }}
                   >
-                    <X size={18} />
-                  </button>
+                    {modal === 'add'
+                      ? '🎯 Nuevo objetivo'
+                      : '✏️ Editar objetivo'}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      color: T.muted,
+                      marginTop: '0.1rem',
+                    }}
+                  >
+                    Paso {step} de {TOTAL_STEPS}
+                  </div>
                 </div>
+                <GhostBtn onClick={closeModal} T={T}>
+                  <X size={18} />
+                </GhostBtn>
               </div>
 
-              <div style={{ padding: '1rem 1.5rem 1.5rem' }}>
-                {step === 1 && renderStep1()}
-                {step === 2 && renderStep2()}
-                {step === 3 && renderStep3()}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '0.375rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
+                {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      flex: 1,
+                      height: '0.25rem',
+                      borderRadius: '9999px',
+                      background: i < step ? T.accent : T.cardBorder,
+                      transition: 'background 0.3s',
+                    }}
+                  />
+                ))}
+              </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.75rem',
-                    marginTop: '1.25rem',
-                  }}
-                >
-                  {step < TOTAL_STEPS ? (
-                    <PrimaryBtn onClick={handleNext} fullWidth>
-                      Continuar →
-                    </PrimaryBtn>
-                  ) : (
-                    <PrimaryBtn onClick={save} fullWidth>
-                      <Check size={15} />
-                      {modal === 'add' ? 'Crear objetivo' : 'Guardar cambios'}
-                    </PrimaryBtn>
-                  )}
-                  {step > 1 && (
-                    <SecondaryBtn onClick={() => setStep((s) => s - 1)} T={T}>
-                      ← Atrás
-                    </SecondaryBtn>
-                  )}
-                  {step === 1 && (
-                    <SecondaryBtn onClick={closeModal} T={T}>
-                      Cancelar
-                    </SecondaryBtn>
-                  )}
-                </div>
+              {step === 1 && renderStep1()}
+              {step === 2 && renderStep2()}
+              {step === 3 && renderStep3()}
+
+              <div
+                style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}
+              >
+                {step > 1 && (
+                  <SecondaryBtn
+                    onClick={() => setStep((s) => s - 1)}
+                    T={T}
+                    style={{ flex: 1 }}
+                  >
+                    ← Atrás
+                  </SecondaryBtn>
+                )}
+                {step < TOTAL_STEPS ? (
+                  <PrimaryBtn onClick={handleNext} T={T} style={{ flex: 2 }}>
+                    Siguiente →
+                  </PrimaryBtn>
+                ) : (
+                  <PrimaryBtn onClick={save} T={T} style={{ flex: 2 }}>
+                    <Check size={16} /> Guardar objetivo
+                  </PrimaryBtn>
+                )}
               </div>
             </div>
           </div>,
           document.body
         )}
 
-      {/* Confirm delete */}
       {confirmDelete && (
         <ConfirmModal
           T={T}
           title="¿Eliminar objetivo?"
-          message={`Vas a eliminar "${
-            goals.find((g) => g.id === confirmDelete)?.name
-          }". Esta acción no se puede deshacer.`}
+          message="Esta acción no se puede deshacer."
           onConfirm={() => {
             setGoals((prev) => prev.filter((g) => g.id !== confirmDelete));
             toast('Objetivo eliminado', 'success');
@@ -1846,18 +1858,7 @@ export function Goals() {
         />
       )}
 
-      {/* ── Coach Mark — primera visita ── */}
-      {!coachSeen && (
-        <CoachMark
-          targetRef={coachRef}
-          title="Ponle nombre a lo que ahorras"
-          description="La app calcula automáticamente si vas a llegar a tiempo según tu ritmo actual de ahorro. Sin que hagas nada."
-          ctaLabel="Me apunto →"
-          onDismiss={coachMarkSeen}
-          accentColor="#d97706"
-        />
-      )}
-      {showFirstWin && (
+{showFirstWin && (
         <FirstWinToast
           type="goal"
           onDone={() => {
@@ -1867,9 +1868,6 @@ export function Goals() {
           }}
         />
       )}
-
-      {/* ── Footer documento (solo impresión) ── */}
-      <PrintFooter section="Objetivos de Ahorro" />
     </div>
   );
 }

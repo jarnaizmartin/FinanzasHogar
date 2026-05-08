@@ -12,18 +12,68 @@ export type AlertType =
   | 'month_negative'
   | 'goal_overdue'
   | 'goal_completed'
-  | 'duplicate_projection';
+  | 'duplicate_projection'
+  | 'credit_utilization_high'
+  | 'credit_payment_due'
+  | 'credit_interest_warning';
 
-// ✅ FIX 10 — Tipos base de entidades (antes eran any[] en BackupEntry y calcForecast)
-export type Account = {
-  id: string;
-  name: string;
-  balance: number;
-  currency?: string;
-  date: string;
-  minBalance?: number;
-};
+// Tipo de acción que debe ejecutar el botón principal de una alerta.
+// - 'navigate'           → Cambia de pestaña (comportamiento por defecto)
+// - 'open_payment_modal' → Abre el CreditCardPaymentModal de la tarjeta indicada en data.accountId
+// - 'open_simulator'     → Navega a Accounts y expande el simulador de la tarjeta indicada en data.accountId
+export type AlertActionType =
+  | 'navigate'
+  | 'open_payment_modal'
+  | 'open_simulator';
 
+  // ✅ FIX 10 — Tipos base de entidades (antes eran any[] en BackupEntry y calcForecast)
+  export type Account = {
+    id: string;
+    name: string;
+    balance: number;
+    currency?: string;
+    date: string;
+    minBalance?: number;
+    // Tipo de cuenta
+    accountType?: 'checking' | 'savings' | 'credit_card' | 'investment' | 'loan';
+    // Entidad financiera (opcional, solo informativo)
+    // Puede ser un nombre del catálogo (ver lib/financialInstitutions.ts)
+    // o un texto libre escrito por el usuario.
+    institution?: string;
+    // Campos exclusivos de tarjeta de crédito
+    creditLimit?: number;      // Límite de crédito autorizado
+    billingDay?: number;       // Día de corte (1-31)
+    paymentDueDay?: number;    // Día de vencimiento del pago (1-31)
+    interestRate?: number;     // TAE en % (ej: 24.9 para tarjeta · 2.5 para hipoteca)
+    minPaymentPct?: number;    // % pago mínimo (ej: 5)
+    // ── Campos exclusivos de préstamos/hipotecas ──
+    loanType?: 'mortgage' | 'personal';   // Tipo de préstamo (icono y etiqueta)
+    monthlyPayment?: number;              // Cuota mensual actual
+    paymentsRemaining?: number;           // Nº de cuotas que quedan por pagar
+    interestType?: 'fixed' | 'variable';  // Tipo de interés (informativo en Fase 1)
+    paymentDay?: number;                  // Día del mes en que se carga la cuota (1-31)
+    paymentAccountId?: string;            // Cuenta corriente desde la que se paga la cuota
+    linkedProjectionId?: string;          // ID de la proyección recurrente auto-vinculada
+    // ── Amortización parcial (Fase 2.1) ──
+    /** Comisión de amortización parcial en % sobre el importe amortizado. Opcional. Default 0. */
+    amortizationFeePct?: number;
+    /** Histórico de amortizaciones parciales aplicadas a este préstamo */
+    amortizations?: Array<{
+      id: string;
+      date: string;                              // YYYY-MM-DD
+      amount: number;                            // Capital amortizado (sin comisión)
+      fee: number;                               // Comisión cobrada (puede ser 0)
+      mode: 'reduce_payment' | 'reduce_term';
+      fromAccountId: string;                     // Cuenta desde la que salió el dinero
+      // Snapshot del estado del préstamo para histórico
+      prevMonthlyPayment?: number;
+      newMonthlyPayment?: number;
+      prevPaymentsRemaining?: number;
+      newPaymentsRemaining?: number;
+      interestSavedEstimate?: number;            // Estimación de intereses ahorrados
+    }>;
+  };
+  
 export type Category = {
   id: string;
   name: string;
@@ -51,6 +101,7 @@ export type AppAlert = {
   message: string;
   actionLabel?: string;
   actionTab?: string;
+  actionType?: AlertActionType; // ✅ NUEVO — define cómo se ejecuta la acción primaria
   data?: Record<string, string | number | boolean>; // ✅ FIX 11 — era Record<string, any>
   generatedAt: number;
 };
@@ -59,8 +110,9 @@ export type Projection = {
   id: string;
   name: string;
   accountId: string;
+  toAccountId?: string;
   categoryId: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   frequency: string;
   startDate: string;
@@ -71,6 +123,7 @@ export type Projection = {
   lastApplied?: string;
   hasDuplicateWarning?: boolean;
   duplicateWarningMonth?: string;
+  linkedLoanId?: string; // Si está presente, esta proyección representa la cuota de un préstamo (solo lectura en UI)
 };
 
 export type RealExpense = {
@@ -86,6 +139,8 @@ export type RealExpense = {
   notes?: string;
   isDuplicateWarning?: boolean;
   duplicateReviewed?: boolean;
+  isTransfer?: boolean;     // Marca este movimiento como parte de una transferencia
+  transferId?: string;      // Vincula los dos tramos de la misma transferencia
 };
 
 export type BankColumnKey =
@@ -149,6 +204,7 @@ export type SavingsGoal = {
   currentAmount: number;
   categoryId: string;
   accountId: string;
+  fromAccountId?: string;
   autoType: 'income' | 'expense';
   autoStartDate: string;
 };

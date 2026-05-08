@@ -89,20 +89,55 @@ export function applyRecurringProjections(
     const acc = accounts.find((a) => a.id === proj.accountId);
     const currency = acc?.currency ?? baseCurrency;
 
-    const newExpense: RealExpense = {
-      id: uid(),
-      entryDate: chargeDate,
-      valueDate: chargeDate,
-      description: `🔄 ${proj.name}`,
-      categoryId: proj.categoryId,
-      amount,
-      currency,
-      type: proj.type as 'income' | 'expense',
-      accountId: proj.accountId,
-      notes: 'Generado automáticamente por cargo recurrente',
-    };
+    if (proj.type === 'transfer' && proj.toAccountId) {
+      const transferId = uid();
+      const toAcc = accounts.find((a) => a.id === proj.toAccountId);
+      const toCurrency = toAcc?.currency ?? baseCurrency;
+      newExpenses.push(
+        {
+          id: uid(),
+          entryDate: chargeDate,
+          valueDate: chargeDate,
+          description: `🔄 ${proj.name}`,
+          categoryId: '__transfer__',
+          amount,
+          currency,
+          type: 'expense',
+          accountId: proj.accountId,
+          notes: 'Generado automáticamente por transferencia recurrente',
+          isTransfer: true,
+          transferId,
+        },
+        {
+          id: uid(),
+          entryDate: chargeDate,
+          valueDate: chargeDate,
+          description: `🔄 ${proj.name}`,
+          categoryId: '__transfer__',
+          amount,
+          currency: toCurrency,
+          type: 'income',
+          accountId: proj.toAccountId,
+          notes: 'Generado automáticamente por transferencia recurrente',
+          isTransfer: true,
+          transferId,
+        }
+      );
+    } else {
+      newExpenses.push({
+        id: uid(),
+        entryDate: chargeDate,
+        valueDate: chargeDate,
+        description: `🔄 ${proj.name}`,
+        categoryId: proj.categoryId,
+        amount,
+        currency,
+        type: proj.type as 'income' | 'expense',
+        accountId: proj.accountId,
+        notes: 'Generado automáticamente por cargo recurrente',
+      });
+    }
 
-    newExpenses.push(newExpense);
     applied++;
 
     const idx = updatedProjections.findIndex((p) => p.id === proj.id);

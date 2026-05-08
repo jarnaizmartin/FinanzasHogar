@@ -39,6 +39,7 @@ import { Goals } from './views/Goals';
 import { Accounts } from './views/Accounts';
 import { Projections } from './views/Projections';
 import { RealExpenses } from './views/RealExpenses';
+import { Transfers } from './views/Transfers';
 import { Dashboard } from './views/Dashboard';
 import { TrialBanner } from './LicenseScreens';
 import { WelcomeTour } from './WelcomeTour';
@@ -60,6 +61,7 @@ const TABS = [
   { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
   { id: 'accounts', label: 'Cuentas', icon: Wallet },
   { id: 'real', label: 'Movimientos', icon: Receipt },
+  { id: 'transfers', label: 'Transferencias', icon: ArrowLeftRight },
   { id: 'projections', label: 'Proyecciones', icon: BarChart2 },
   { id: 'goals', label: 'Objetivos', icon: Target },
   { id: 'calendar', label: 'Calendario', icon: CalendarRange },
@@ -546,7 +548,7 @@ export function AppShell() {
             {TABS.map((tab_) => {
               const Icon = tab_.icon;
               const active = tab === tab_.id;
-              const REQUIRES_ACCOUNT = ['real', 'projections', 'goals'];
+              const REQUIRES_ACCOUNT = ['real', 'transfers', 'projections', 'goals'];
               const isBlocked = REQUIRES_ACCOUNT.includes(tab_.id) && accounts.length === 0;
               return (
                 <button
@@ -723,6 +725,7 @@ export function AppShell() {
           {tab === 'forecast'    && <Forecast />}
           {tab === 'categories'  && <Categories />}
           {tab === 'real'        && <RealExpenses />}
+          {tab === 'transfers'   && <Transfers />}
           {tab === 'goals'       && <Goals />}
           {tab === 'alerts'      && <AlertsPanel />}
           {tab === 'trends'      && <TrendsView />}

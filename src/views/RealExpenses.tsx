@@ -65,6 +65,8 @@ export function RealExpenses() {
     setRealFilterDateTo,
     realAccountFilter,
     setRealAccountFilter,
+    realReturnTo,
+    setRealReturnTo,
     dateFormat,
     setTab,
   } = useApp();
@@ -107,12 +109,21 @@ export function RealExpenses() {
   const filterDateTo = realFilterDateTo;
   const setFilterDateTo = setRealFilterDateTo;
 
+  // Cuando se navega a esta pestaña con una cuenta específica (desde Cuentas,
+  // LoanDetailView, etc.) aplicamos el filtro de cuenta y reseteamos el resto
+  // para garantizar que el usuario vea TODOS los movimientos de esa cuenta.
   useEffect(() => {
     if (realAccountFilter && realAccountFilter !== 'all') {
       setFilterAccount(realAccountFilter);
+      setFilterType('all');
+      setFilterCategory('all');
+      setFilterPreset('all');
+      setFilterDateMode('preset');
+      setFilterDateFrom('');
+      setFilterDateTo('');
       setRealAccountFilter('all');
     }
-  }, []);
+  }, [realAccountFilter]);
 
   const emptyForm = {
     entryDate: today(),
@@ -301,7 +312,7 @@ export function RealExpenses() {
   const totalIncome = useMemo(
     () =>
       filtered
-        .filter((e) => e.type === 'income')
+        .filter((e) => e.type === 'income' && !e.isTransfer)
         .reduce(
           (s, e) =>
             s + convertAmount(e.amount, e.currency, displayCurrency, rates),
@@ -313,7 +324,7 @@ export function RealExpenses() {
   const totalExpense = useMemo(
     () =>
       filtered
-        .filter((e) => e.type === 'expense')
+        .filter((e) => e.type === 'expense' && !e.isTransfer)
         .reduce(
           (s, e) =>
             s + convertAmount(e.amount, e.currency, displayCurrency, rates),
@@ -412,7 +423,38 @@ export function RealExpenses() {
 
   return (
     <div className="fh-print-section">
-  
+
+      {/* ── Botón "Volver a..." contextual ──────────────────────────────────
+          Solo aparece si se llegó a esta vista desde otra pantalla (Cuentas,
+          detalle de préstamo, detalle de tarjeta...). Si se accede directamente
+          desde el menú principal, no se muestra. */}
+      {realReturnTo && (
+        <button
+          className="fh-no-print"
+          onClick={() => {
+            const target = realReturnTo;
+            setRealReturnTo(null);
+            setTab(target.tab);
+          }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.5rem 0.85rem',
+            borderRadius: '0.65rem',
+            border: `1px solid ${T.cardBorder}`,
+            background: T.cardBg,
+            color: T.muted,
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            marginBottom: '1rem',
+          }}
+        >
+          ← Volver a {realReturnTo.label}
+        </button>
+      )}
+
       {/* ── Cabecera documento (solo impresión) ── */}
       <PrintHeader
         title="Movimientos Reales"
@@ -1141,15 +1183,7 @@ export function RealExpenses() {
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          flexWrap: 'wrap',
-                          marginBottom: '0.25rem',
-                        }}
-                      >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                         <span
                           style={{
                             fontSize: '0.9rem',
@@ -1159,11 +1193,28 @@ export function RealExpenses() {
                         >
                           {expense.description}
                         </span>
-                        <Badge type={expense.type} T={T} />
+                        {expense.isTransfer ? (
+                          <span style={{
+                            padding: '0.1rem 0.5rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            background: T.accentLight,
+                            color: T.accent,
+                            border: `1px solid ${T.accent}33`,
+                            whiteSpace: 'nowrap',
+                          }}>
+                            ↔ Transferencia
+                          </span>
+                        ) : (
+                          <Badge type={expense.type} T={T} />
+                        )}
                       </div>
                       <div style={{ fontSize: '0.775rem', color: T.muted }}>
-                        {cat?.name ?? '—'} · {acc?.name ?? '—'} ·{' '}
-                        {fmtDateShort(expense.entryDate, dateFormat)}
+                        {expense.isTransfer
+                          ? `↔ Transferencia · ${acc?.name ?? '—'}`
+                          : `${cat?.name ?? '—'} · ${acc?.name ?? '—'}`}{' '}
+                        · {fmtDateShort(expense.entryDate, dateFormat)}
                         {expense.notes?.includes('recurrente') && (
                           <span
                             style={{
@@ -1265,16 +1316,31 @@ export function RealExpenses() {
                       className="fh-no-print"
                       style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}
                     >
-                      <GhostBtn onClick={() => openEdit(expense)} T={T}>
-                        <Pencil size={15} />
-                      </GhostBtn>
-                      <GhostBtn
-                        onClick={() => del(expense.id)}
-                        T={T}
-                        color={T.red}
-                      >
-                        <Trash2 size={15} />
-                      </GhostBtn>
+                      {!expense.isTransfer && (
+                        <>
+                          <GhostBtn onClick={() => openEdit(expense)} T={T}>
+                            <Pencil size={15} />
+                          </GhostBtn>
+                          <GhostBtn
+                            onClick={() => del(expense.id)}
+                            T={T}
+                            color={T.red}
+                          >
+                            <Trash2 size={15} />
+                          </GhostBtn>
+                        </>
+                      )}
+                      {expense.isTransfer && (
+                        <span style={{
+                          fontSize: '0.65rem',
+                          color: T.muted,
+                          fontStyle: 'italic',
+                          padding: '0.4rem 0.5rem',
+                          alignSelf: 'center',
+                        }}>
+                          Gestionar en Transferencias
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Card>

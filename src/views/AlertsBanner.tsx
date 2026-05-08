@@ -2,7 +2,32 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
 
 export function AlertsBanner() {
-  const { T, computedAlerts, setIgnoredAlerts, setTab } = useApp();
+  const {
+    T,
+    computedAlerts,
+    setIgnoredAlerts,
+    setTab,
+    openPaymentModal,
+    requestOpenSimulator,
+  } = useApp();
+
+  // Ejecuta la acción primaria de una alerta según su actionType.
+  // Por defecto navega a actionTab (comportamiento legacy).
+  const runAlertAction = (alert: typeof computedAlerts[number]) => {
+    const accountId = alert.data?.accountId as string | undefined;
+    switch (alert.actionType) {
+      case 'open_payment_modal':
+        if (accountId) openPaymentModal(accountId);
+        break;
+      case 'open_simulator':
+        if (accountId) requestOpenSimulator(accountId);
+        break;
+      case 'navigate':
+      default:
+        if (alert.actionTab) setTab(alert.actionTab);
+        break;
+    }
+  };
 
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(true);
@@ -78,6 +103,9 @@ export function AlertsBanner() {
     month_negative: '💸',
     goal_overdue: '📅',
     goal_completed: '🎉',
+    credit_utilization_high: '💳',
+    credit_payment_due: '⏰',
+    credit_interest_warning: '💰',
   };
 
   const cfg = bannerConfig[topSeverity];
@@ -307,9 +335,9 @@ export function AlertsBanner() {
                 <div
                   style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}
                 >
-                  {alert.actionTab && (
+                  {(alert.actionTab || alert.actionType) && (
                     <button
-                      onClick={() => setTab(alert.actionTab!)}
+                      onClick={() => runAlertAction(alert)}
                       style={{
                         padding: '0.4rem 0.75rem',
                         borderRadius: '0.625rem',

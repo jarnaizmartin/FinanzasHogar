@@ -16,6 +16,8 @@ export type UIContextType = {
   setShowCurrency: React.Dispatch<React.SetStateAction<boolean>>;
   realAccountFilter: string;
   setRealAccountFilter: React.Dispatch<React.SetStateAction<string>>;
+  realReturnTo: { label: string; tab: string; loanId?: string; creditCardId?: string } | null;
+  setRealReturnTo: React.Dispatch<React.SetStateAction<{ label: string; tab: string; loanId?: string; creditCardId?: string } | null>>;
   realFilterType: string;
   setRealFilterType: React.Dispatch<React.SetStateAction<string>>;
   realFilterAccount: string;
@@ -48,6 +50,19 @@ export type UIContextType = {
   >;
   showRecurringWarnings: boolean;
   setShowRecurringWarnings: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // ── Modal global de pago de tarjeta de crédito ──────────────────────────
+  // Cualquier componente puede solicitar abrirlo con openPaymentModal(accountId).
+  // Se renderiza una única vez en <App /> vía <GlobalModals />.
+  paymentModalAccountId: string | null;
+  openPaymentModal: (accountId: string) => void;
+  closePaymentModal: () => void;
+
+  // ── Petición global de apertura del simulador de amortización ───────────
+  // Se "consume" cuando Accounts.tsx la procesa (one-shot, evita bucles).
+  simulatorRequestAccountId: string | null;
+  requestOpenSimulator: (accountId: string) => void;
+  consumeSimulatorRequest: () => void;
 };
 
 // ─── Contexto ─────────────────────────────────────────────────────────────────
@@ -65,6 +80,12 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [tab, setTab] = useState('dashboard');
   const [showCurrency, setShowCurrency] = useState(false);
   const [realAccountFilter, setRealAccountFilter] = useState('all');
+  // Origen de navegación a la pestaña Movimientos. Cuando se setea, RealExpenses
+  // muestra un botón "← Volver a {label}" que devuelve al usuario a su origen.
+  // null = se accedió directamente desde el menú principal.
+  const [realReturnTo, setRealReturnTo] = useState<{
+    label: string; tab: string; loanId?: string; creditCardId?: string;
+  } | null>(null);
   const [realFilterType, setRealFilterType] = useState('all');
   const [realFilterAccount, setRealFilterAccount] = useState('all');
   const [realFilterCategory, setRealFilterCategory] = useState('all');
@@ -86,6 +107,20 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   >([]);
   const [showRecurringWarnings, setShowRecurringWarnings] = useState(false);
 
+  // Estado global del modal de pago (un único modal en toda la app)
+  const [paymentModalAccountId, setPaymentModalAccountId] = useState<string | null>(null);
+  const openPaymentModal = (accountId: string) => setPaymentModalAccountId(accountId);
+  const closePaymentModal = () => setPaymentModalAccountId(null);
+
+  // Petición one-shot para que Accounts.tsx abra el simulador y haga scroll
+  const [simulatorRequestAccountId, setSimulatorRequestAccountId] = useState<string | null>(null);
+  const requestOpenSimulator = (accountId: string) => {
+    // Cambiamos a la pestaña Accounts de inmediato y dejamos la petición pendiente
+    setTab('accounts');
+    setSimulatorRequestAccountId(accountId);
+  };
+  const consumeSimulatorRequest = () => setSimulatorRequestAccountId(null);
+
   const value = useMemo(
     () => ({
       tab,
@@ -94,6 +129,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setShowCurrency,
       realAccountFilter,
       setRealAccountFilter,
+      realReturnTo,
+      setRealReturnTo,
       realFilterType,
       setRealFilterType,
       realFilterAccount,
@@ -118,11 +155,18 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setRecurringDuplicateWarnings,
       showRecurringWarnings,
       setShowRecurringWarnings,
+      paymentModalAccountId,
+      openPaymentModal,
+      closePaymentModal,
+      simulatorRequestAccountId,
+      requestOpenSimulator,
+      consumeSimulatorRequest,
     }),
     [
       tab,
       showCurrency,
       realAccountFilter,
+      realReturnTo,
       realFilterType,
       realFilterAccount,
       realFilterCategory,
@@ -133,12 +177,10 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       projFilterType,
       projFilterAccount,
       projSortBy,
-      realFilterDateMode,
-      realFilterPreset,
-      realFilterDateFrom,
-      realFilterDateTo,
       recurringDuplicateWarnings,
       showRecurringWarnings,
+      paymentModalAccountId,
+      simulatorRequestAccountId,
     ]
   );
 

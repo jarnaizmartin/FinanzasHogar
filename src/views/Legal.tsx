@@ -29,7 +29,11 @@ export const LEGAL_DOCS = {
         text: 'El código fuente, diseño y contenidos de FinanzasHogar son propiedad del autor del proyecto. Queda prohibida su reproducción, distribución o modificación sin autorización expresa, salvo en los términos previstos por la licencia aplicable al proyecto.',
       },
       {
-        heading: '6. Legislación aplicable',
+        heading: '6. Marcas y logotipos de entidades financieras',
+        text: 'FinanzasHogar puede mostrar nombres y logotipos de entidades bancarias y financieras (bancos, neobancos, brokers, etc.) con el único propósito de que el usuario pueda identificar visualmente sus propias cuentas dentro de la aplicación. Estas marcas y logotipos son propiedad exclusiva de sus respectivos titulares y se utilizan al amparo del uso nominativo o referencial reconocido por la normativa europea de marcas. FinanzasHogar NO está afiliada, asociada, autorizada, patrocinada ni respaldada por ninguna de las entidades financieras mencionadas, ni mantiene relación comercial alguna con ellas. El usuario es libre de no asignar ninguna entidad a sus cuentas si así lo prefiere. Si eres titular de una marca y consideras que su uso en esta aplicación no es adecuado, ponte en contacto con el autor del proyecto para su retirada.',
+      },
+      {
+        heading: '7. Legislación aplicable',
         text: 'Este aviso legal se rige por la legislación española y europea vigente. Para cualquier controversia derivada del uso de la aplicación, las partes se someten a los juzgados y tribunales del domicilio del usuario, en la medida en que la ley aplicable así lo permita.',
       },
     ],

@@ -151,6 +151,21 @@ const PREDEFINED_BANK_FORMATS: BankFormat[] = [
     negativeIsExpense: true,
     note: 'Bankinter descarga en .xlsx. Ábrelo en Excel y guárdalo como CSV (separador ;) antes de importar.',
   },
+  // ── Tarjetas de crédito ──────────────────────────────────────────────────
+  {
+    id: 'bankinter_card',
+    name: 'Bankinter — Tarjeta Visa/Mastercard',
+    isCustom: false,
+    separator: ';',
+    decimal: ',',
+    encoding: 'latin1',
+    skipRows: 6,
+    dateFormat: 'dd/mm/yyyy',
+    amountMode: 'single',
+    columns: ['date', 'description', 'amount'],
+    negativeIsExpense: true,
+    note: 'Descarga el detalle de movimientos de la tarjeta desde Bankinter → Tarjetas → Movimientos. Si llega en .xlsx, ábrelo en Excel y guárdalo como CSV (separador ;).',
+  },
 ];
 
 const DEFAULT_CATEGORY_RULES_KEYWORDS: Record<string, string[]> = {
@@ -337,9 +352,18 @@ function parseBankCSV(raw: string, format: BankFormat) {
   > & { detectedCurrency?: string })[] = [];
 
   const lines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const dataLines = lines
-    .slice(format.skipRows)
-    .filter((l) => l.trim().length > 0);
+
+  // Patrones de filas a descartar (resúmenes, totales, subtotales que aparecen
+  // al final de muchos extractos: "Total Crédito;;-309,00", "TOTAL;...", etc.)
+  const SKIP_ROW_PATTERNS =
+    /^(total|subtotal|saldo\s+(final|inicial)|resumen)/i;
+
+  const dataLines = lines.slice(format.skipRows).filter((l) => {
+    const trimmed = l.trim();
+    if (trimmed.length === 0) return false;
+    if (SKIP_ROW_PATTERNS.test(trimmed)) return false;
+    return true;
+  });
 
   dataLines.forEach((line, idx) => {
     try {
@@ -451,7 +475,13 @@ function fmtDateDMY(dateStr: string, dateFormat: string): string {
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function BankImportModal({ onClose }: { onClose: () => void }) {
+export function BankImportModal({
+  onClose,
+  defaultAccountId,
+}: {
+  onClose: () => void;
+  defaultAccountId?: string;
+}) {
   const {
     T,
     accounts,
@@ -504,7 +534,7 @@ export function BankImportModal({ onClose }: { onClose: () => void }) {
   const [rawCSV, setRawCSV] = useState('');
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState(
-    accounts[0]?.id ?? ''
+    defaultAccountId ?? accounts[0]?.id ?? ''
   );
   const [overrideSkipRows, setOverrideSkipRows] = useState<number | null>(null);
   const [importRows, setImportRows] = useState<ImportRow[]>([]);
@@ -603,6 +633,8 @@ export function BankImportModal({ onClose }: { onClose: () => void }) {
     revolut: 'En la app Revolut: Perfil → Extractos → Exportar como CSV',
     bankinter:
       'En Bankinter: Mis cuentas → Exportar movimientos (guarda como CSV)',
+    bankinter_card:
+      'En Bankinter: Tarjetas → Movimientos → Exportar (si descarga en .xlsx, guárdalo como CSV con separador ;)',
   };
 
   const generatePreview = () => {
@@ -1515,7 +1547,7 @@ export function BankImportModal({ onClose }: { onClose: () => void }) {
                     </div>
                   )}
 
-                  <div>
+<div>
                     <label
                       style={{
                         fontSize: '0.68rem',
@@ -1534,12 +1566,42 @@ export function BankImportModal({ onClose }: { onClose: () => void }) {
                       value={selectedAccountId}
                       onChange={(e) => setSelectedAccountId(e.target.value)}
                     >
-                      {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} ({a.currency ?? baseCurrency})
-                        </option>
-                      ))}
+                      {accounts.map((a) => {
+                        const isCard = a.accountType === 'credit_card';
+                        return (
+                          <option key={a.id} value={a.id}>
+                            {isCard ? '💳' : '🏦'} {a.name} (
+                            {a.currency ?? baseCurrency})
+                          </option>
+                        );
+                      })}
                     </select>
+
+                    {/* Banner informativo cuando la cuenta destino es una tarjeta */}
+                    {(() => {
+                      const acc = accounts.find(
+                        (a) => a.id === selectedAccountId
+                      );
+                      if (acc?.accountType !== 'credit_card') return null;
+                      return (
+                        <div
+                          style={{
+                            marginTop: '0.5rem',
+                            padding: '0.625rem 0.875rem',
+                            borderRadius: '0.75rem',
+                            background: T.accentLight,
+                            border: `1px solid ${T.accent}33`,
+                            fontSize: '0.75rem',
+                            color: T.accent,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          💳 <strong>Tarjeta de crédito seleccionada.</strong>{' '}
+                          Los gastos aumentarán la deuda de la tarjeta y los
+                          pagos/abonos la reducirán.
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <input
