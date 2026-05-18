@@ -43,6 +43,7 @@ import { CreditCardDetailView } from '../components/CreditCardDetailView';
 import { AccountFormModal, type AccountFormEntry } from '../components/AccountFormModal';
 import { InstitutionLogo } from '../components/InstitutionLogo';
 import { AmortizationFormModal } from '../components/AmortizationFormModal';
+import { createEntity, touchEntity } from '../lib/entityHelpers';
 import { AmortizationHistory } from '../components/AmortizationHistory';
 import { LoanDetailView } from '../components/LoanDetailView';
 import type { AmortizationMode } from '../lib/loanUtils';
@@ -170,7 +171,6 @@ export function Accounts() {
         const chargeDay = entry.paymentDay && entry.paymentDay >= 1 && entry.paymentDay <= 31
           ? entry.paymentDay
           : 1;
-        // Fecha de inicio = primer día de cargo (este mes o el siguiente)
         const today = new Date();
         const startThisMonth = new Date(today.getFullYear(), today.getMonth(), chargeDay);
         const start = startThisMonth >= today
@@ -183,8 +183,8 @@ export function Accounts() {
           {
             id: linkedProjectionId,
             name: `Cuota: ${entry.name}`,
-            accountId: entry.paymentAccountId!,    // Cuenta origen (corriente)
-            toAccountId: newAccountId,             // Préstamo (destino)
+            accountId: entry.paymentAccountId!,
+            toAccountId: newAccountId,
             categoryId: '__transfer__',
             type: 'transfer',
             amount: entry.monthlyPayment,
@@ -193,15 +193,22 @@ export function Accounts() {
             endDate: '',
             isRecurring: true,
             recurringDay: chargeDay,
-            linkedLoanId: newAccountId,             // Marca la proyección como vinculada
+            linkedLoanId: newAccountId,
           },
         ]);
       }
 
+      // ✨ MIGRADO: usa createEntity para timestamps automáticos
       setAccounts((p) => [
         ...p,
-        { ...entry, id: newAccountId, linkedProjectionId, acknowledgedExpenseIds: [] },
+        createEntity<typeof accounts[number]>({
+          ...entry,
+          id: newAccountId,
+          linkedProjectionId,
+          acknowledgedExpenseIds: [],
+        }),
       ]);
+
       toast(
         entry.accountType === 'loan'
           ? 'Préstamo creado. Se ha generado automáticamente una proyección mensual para la cuota.'
@@ -244,6 +251,7 @@ export function Accounts() {
         }
       }
 
+      // ✨ MIGRADO: usa touchEntity para refrescar updatedAt
       setAccounts((p) =>
         p.map((a) => {
           if (a.id !== modal) return a;
@@ -262,7 +270,7 @@ export function Accounts() {
               ...newlyAcknowledged,
             ];
           }
-          return { ...a, ...entry, acknowledgedExpenseIds };
+          return touchEntity(a, { ...entry, acknowledgedExpenseIds });
         })
       );
 
