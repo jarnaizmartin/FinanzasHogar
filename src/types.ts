@@ -1,5 +1,15 @@
 // ─── Tipos compartidos de la aplicación ──────────────────────────────────────
 
+// ✅ FASE 0.5 / Bloque 1 — Base para sync E2E futuro (v2)
+// Todas las entidades persistentes extienden esta interface.
+// - createdAt / updatedAt: epoch ms (Date.now()) para resolver conflictos last-write-wins
+// - deletedAt: tombstone para propagar deletes en sync sin perder histórico
+export interface Timestamped {
+  createdAt: number;
+  updatedAt: number;
+  deletedAt?: number;
+}
+
 export type RatesStatus = 'fresh' | 'stale' | 'error' | 'loading';
 export type AuthMethod = 'password' | 'totp';
 export type AlertSeverity = 'critical' | 'warning' | 'positive';
@@ -26,55 +36,55 @@ export type AlertActionType =
   | 'open_payment_modal'
   | 'open_simulator';
 
-  // ✅ FIX 10 — Tipos base de entidades (antes eran any[] en BackupEntry y calcForecast)
-  export type Account = {
+// ✅ FIX 10 — Tipos base de entidades (antes eran any[] en BackupEntry y calcForecast)
+export type Account = Timestamped & {
+  id: string;
+  name: string;
+  balance: number;
+  currency?: string;
+  date: string;
+  minBalance?: number;
+  // Tipo de cuenta
+  accountType?: 'checking' | 'savings' | 'credit_card' | 'investment' | 'loan';
+  // Entidad financiera (opcional, solo informativo)
+  // Puede ser un nombre del catálogo (ver lib/financialInstitutions.ts)
+  // o un texto libre escrito por el usuario.
+  institution?: string;
+  // Campos exclusivos de tarjeta de crédito
+  creditLimit?: number;      // Límite de crédito autorizado
+  billingDay?: number;       // Día de corte (1-31)
+  paymentDueDay?: number;    // Día de vencimiento del pago (1-31)
+  interestRate?: number;     // TAE en % (ej: 24.9 para tarjeta · 2.5 para hipoteca)
+  minPaymentPct?: number;    // % pago mínimo (ej: 5)
+  // ── Campos exclusivos de préstamos/hipotecas ──
+  loanType?: 'mortgage' | 'personal';   // Tipo de préstamo (icono y etiqueta)
+  monthlyPayment?: number;              // Cuota mensual actual
+  paymentsRemaining?: number;           // Nº de cuotas que quedan por pagar
+  interestType?: 'fixed' | 'variable';  // Tipo de interés (informativo en Fase 1)
+  paymentDay?: number;                  // Día del mes en que se carga la cuota (1-31)
+  paymentAccountId?: string;            // Cuenta corriente desde la que se paga la cuota
+  linkedProjectionId?: string;          // ID de la proyección recurrente auto-vinculada
+  // ── Amortización parcial (Fase 2.1) ──
+  /** Comisión de amortización parcial en % sobre el importe amortizado. Opcional. Default 0. */
+  amortizationFeePct?: number;
+  /** Histórico de amortizaciones parciales aplicadas a este préstamo */
+  amortizations?: Array<{
     id: string;
-    name: string;
-    balance: number;
-    currency?: string;
-    date: string;
-    minBalance?: number;
-    // Tipo de cuenta
-    accountType?: 'checking' | 'savings' | 'credit_card' | 'investment' | 'loan';
-    // Entidad financiera (opcional, solo informativo)
-    // Puede ser un nombre del catálogo (ver lib/financialInstitutions.ts)
-    // o un texto libre escrito por el usuario.
-    institution?: string;
-    // Campos exclusivos de tarjeta de crédito
-    creditLimit?: number;      // Límite de crédito autorizado
-    billingDay?: number;       // Día de corte (1-31)
-    paymentDueDay?: number;    // Día de vencimiento del pago (1-31)
-    interestRate?: number;     // TAE en % (ej: 24.9 para tarjeta · 2.5 para hipoteca)
-    minPaymentPct?: number;    // % pago mínimo (ej: 5)
-    // ── Campos exclusivos de préstamos/hipotecas ──
-    loanType?: 'mortgage' | 'personal';   // Tipo de préstamo (icono y etiqueta)
-    monthlyPayment?: number;              // Cuota mensual actual
-    paymentsRemaining?: number;           // Nº de cuotas que quedan por pagar
-    interestType?: 'fixed' | 'variable';  // Tipo de interés (informativo en Fase 1)
-    paymentDay?: number;                  // Día del mes en que se carga la cuota (1-31)
-    paymentAccountId?: string;            // Cuenta corriente desde la que se paga la cuota
-    linkedProjectionId?: string;          // ID de la proyección recurrente auto-vinculada
-    // ── Amortización parcial (Fase 2.1) ──
-    /** Comisión de amortización parcial en % sobre el importe amortizado. Opcional. Default 0. */
-    amortizationFeePct?: number;
-    /** Histórico de amortizaciones parciales aplicadas a este préstamo */
-    amortizations?: Array<{
-      id: string;
-      date: string;                              // YYYY-MM-DD
-      amount: number;                            // Capital amortizado (sin comisión)
-      fee: number;                               // Comisión cobrada (puede ser 0)
-      mode: 'reduce_payment' | 'reduce_term';
-      fromAccountId: string;                     // Cuenta desde la que salió el dinero
-      // Snapshot del estado del préstamo para histórico
-      prevMonthlyPayment?: number;
-      newMonthlyPayment?: number;
-      prevPaymentsRemaining?: number;
-      newPaymentsRemaining?: number;
-      interestSavedEstimate?: number;            // Estimación de intereses ahorrados
-    }>;
-  };
-  
-export type Category = {
+    date: string;                              // YYYY-MM-DD
+    amount: number;                            // Capital amortizado (sin comisión)
+    fee: number;                               // Comisión cobrada (puede ser 0)
+    mode: 'reduce_payment' | 'reduce_term';
+    fromAccountId: string;                     // Cuenta desde la que salió el dinero
+    // Snapshot del estado del préstamo para histórico
+    prevMonthlyPayment?: number;
+    newMonthlyPayment?: number;
+    prevPaymentsRemaining?: number;
+    newPaymentsRemaining?: number;
+    interestSavedEstimate?: number;            // Estimación de intereses ahorrados
+  }>;
+};
+
+export type Category = Timestamped & {
   id: string;
   name: string;
   color?: string;
@@ -106,7 +116,7 @@ export type AppAlert = {
   generatedAt: number;
 };
 
-export type Projection = {
+export type Projection = Timestamped & {
   id: string;
   name: string;
   accountId: string;
@@ -126,7 +136,7 @@ export type Projection = {
   linkedLoanId?: string; // Si está presente, esta proyección representa la cuota de un préstamo (solo lectura en UI)
 };
 
-export type RealExpense = {
+export type RealExpense = Timestamped & {
   id: string;
   entryDate: string;
   valueDate: string;
@@ -154,7 +164,7 @@ export type BankColumnKey =
   | 'currency'
   | 'ignore';
 
-export type BankFormat = {
+export type BankFormat = Timestamped & {
   id: string;
   name: string;
   isCustom: boolean;
@@ -169,7 +179,7 @@ export type BankFormat = {
   negativeIsExpense: boolean;
 };
 
-export type CategoryRule = {
+export type CategoryRule = Timestamped & {
   id: string;
   categoryId: string;
   keywords: string[];
@@ -192,7 +202,7 @@ export type ImportRow = {
   notes: string;
 };
 
-export type SavingsGoal = {
+export type SavingsGoal = Timestamped & {
   id: string;
   name: string;
   emoji: string;
