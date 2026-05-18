@@ -8,6 +8,7 @@
 //   - Imposible olvidarse de los timestamps al crear/modificar entidades
 //   - Base sólida para sync E2E v2 (last-write-wins, tombstones)
 //   - Punto único de extensión futura (logging, métricas, auditoría)
+//
 
 import type { Timestamped } from '../types';
 
