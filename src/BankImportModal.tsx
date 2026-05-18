@@ -285,6 +285,8 @@ const DEFAULT_CATEGORY_RULES_KEYWORDS: Record<string, string[]> = {
   Salario: ['nomina', 'nómina', 'salario', 'sueldo', 'haberes'],
 };
 
+import { createEntity } from './lib/entityHelpers';
+
 const uid = () => crypto.randomUUID();
 const today = () => new Date().toISOString().split('T')[0];
 
@@ -683,18 +685,19 @@ export function BankImportModal({
 
   const confirmImport = () => {
     const toImport = importRows.filter((r) => r.status === 'new');
-    const newExpenses: RealExpense[] = toImport.map((r) => ({
-      id: uid(),
-      entryDate: r.entryDate,
-      valueDate: r.valueDate,
-      description: r.description,
-      categoryId: r.categoryId,
-      amount: r.amount,
-      currency: r.currency,
-      type: r.type,
-      accountId: r.accountId,
-      notes: r.notes,
-    }));
+    const newExpenses: RealExpense[] = toImport.map((r) =>
+      createEntity<RealExpense>({
+        entryDate: r.entryDate,
+        valueDate: r.valueDate,
+        description: r.description,
+        categoryId: r.categoryId,
+        amount: r.amount,
+        currency: r.currency,
+        type: r.type,
+        accountId: r.accountId,
+        notes: r.notes,
+      })
+    );
     setRealExpenses((prev) => [...prev, ...newExpenses]);
     toast(
       `${newExpenses.length} movimiento${

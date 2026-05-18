@@ -411,12 +411,9 @@ export function Accounts() {
       return Math.max(0, prevInterest - newInterest - data.fee);
     })();
 
-    // ── 1. Movimiento ENTRANTE al préstamo (reduce deuda) ──
-    const incomeId = uid();
-    const expenseId = uid();
+    // ── 1+2. Movimientos del transfer (entrante préstamo + saliente origen) ──
     const newMovements: typeof realExpenses = [
-      {
-        id: incomeId,
+      createEntity<typeof realExpenses[number]>({
         entryDate: today,
         valueDate: today,
         description: `Amortización parcial${data.mode === 'reduce_term' ? ' (reduce plazo)' : ' (reduce cuota)'}`,
@@ -427,10 +424,8 @@ export function Accounts() {
         accountId: loan.id,
         isTransfer: true,
         transferId,
-      },
-      // ── 2. Movimiento SALIENTE de la cuenta origen ──
-      {
-        id: expenseId,
+      }),
+      createEntity<typeof realExpenses[number]>({
         entryDate: today,
         valueDate: today,
         description: `Amortización: ${loan.name}`,
@@ -441,22 +436,23 @@ export function Accounts() {
         accountId: data.fromAccountId,
         isTransfer: true,
         transferId,
-      },
+      }),
     ];
 
     // ── 3. Comisión (si aplica) ──
     if (data.fee > 0) {
-      newMovements.push({
-        id: uid(),
-        entryDate: today,
-        valueDate: today,
-        description: `Comisión amortización: ${loan.name}`,
-        categoryId: '__transfer__',
-        amount: data.fee,
-        currency,
-        type: 'expense',
-        accountId: data.fromAccountId,
-      });
+      newMovements.push(
+        createEntity<typeof realExpenses[number]>({
+          entryDate: today,
+          valueDate: today,
+          description: `Comisión amortización: ${loan.name}`,
+          categoryId: '__transfer__',
+          amount: data.fee,
+          currency,
+          type: 'expense',
+          accountId: data.fromAccountId,
+        })
+      );
     }
 
     setRealExpenses((prev) => [...prev, ...newMovements]);
