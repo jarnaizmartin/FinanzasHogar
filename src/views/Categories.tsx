@@ -23,6 +23,7 @@ import {
   GhostBtn,
   QuickCategoryModal,
 } from '../components/UI';
+import { createEntity, touchEntity } from '../lib/entityHelpers';
 
 const uid = () => crypto.randomUUID();
 
@@ -301,11 +302,13 @@ export function Categories() {
   const save = () => {
     if (!form.name) return;
     if (modal === 'add') {
-      setCategories((p: any[]) => [...p, { ...form, id: crypto.randomUUID() }]);
+      // ✨ MIGRADO: createEntity añade id + createdAt + updatedAt
+      setCategories((p: any[]) => [...p, createEntity({ ...form })]);
       toast('Categoría creada correctamente', 'success');
     } else {
+      // ✨ MIGRADO: touchEntity refresca updatedAt preservando createdAt
       setCategories((p: any[]) =>
-        p.map((c) => (c.id === modal ? { ...c, ...form } : c))
+        p.map((c) => (c.id === modal ? touchEntity(c, form) : c))
       );
       toast('Categoría actualizada correctamente', 'success');
     }
