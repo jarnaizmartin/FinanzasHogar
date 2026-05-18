@@ -17,6 +17,8 @@ import {
   PrintHeader,
   PrintFooter,
 } from '../components/UI';
+import { createEntity } from '../lib/entityHelpers';
+
 
 const uid = () => crypto.randomUUID();
 
@@ -126,8 +128,7 @@ export function Transfers() {
     const descOut = form.description || `Transferencia → ${toAcc?.name}`;
     const descIn = form.description || `Transferencia ← ${fromAcc?.name}`;
 
-    const outEntry: RealExpense = {
-      id: uid(),
+    const outEntry = createEntity<RealExpense>({
       entryDate: form.date,
       valueDate: form.date,
       description: descOut,
@@ -139,10 +140,9 @@ export function Transfers() {
       notes: form.notes || `Transferencia a ${toAcc?.name}`,
       isTransfer: true,
       transferId,
-    };
+    });
 
-    const inEntry: RealExpense = {
-      id: uid(),
+    const inEntry = createEntity<RealExpense>({
       entryDate: form.date,
       valueDate: form.date,
       description: descIn,
@@ -154,7 +154,7 @@ export function Transfers() {
       notes: form.notes || `Transferencia desde ${fromAcc?.name}`,
       isTransfer: true,
       transferId,
-    };
+    });
 
     setRealExpenses((prev) => [...prev, outEntry, inEntry]);
     toast('Transferencia registrada correctamente', 'success');

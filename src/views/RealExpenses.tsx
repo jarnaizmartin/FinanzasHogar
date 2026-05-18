@@ -35,6 +35,7 @@ import {
 import { BankImportModal } from '../BankImportModal';
 import { FirstWinToast } from '../components/FirstWinToast';
 import { ProjectedVsReal } from './ProjectedVsReal';
+import { createEntity, touchEntity } from '../lib/entityHelpers';
 
 const uid = () => crypto.randomUUID();
 
@@ -192,7 +193,8 @@ export function RealExpenses() {
     const isFirstExpense = modal === 'add' && realExpenses.length === 0;
 
     if (modal === 'add') {
-      setRealExpenses((p) => [...p, { ...entry, id: uid() }]);
+      // ✨ MIGRADO
+      setRealExpenses((p) => [...p, createEntity(entry)]);
       if (isBeforeBase) {
         setWarningModal(
           `El movimiento se ha guardado correctamente, pero su fecha de valor (${form.valueDate}) es anterior o igual a la fecha del saldo base de la cuenta "${linkedAccount.name}" (${linkedAccount.date}).\n\nEste movimiento NO se aplicará al saldo real calculado, ya que se considera incluido en el saldo base que introdujiste.`
@@ -201,8 +203,9 @@ export function RealExpenses() {
         toast('Movimiento registrado correctamente', 'success');
       }
     } else {
+      // ✨ MIGRADO
       setRealExpenses((p) =>
-        p.map((x) => (x.id === modal ? { ...x, ...entry } : x))
+        p.map((x) => (x.id === modal ? touchEntity(x, entry) : x))
       );
       if (isBeforeBase) {
         setWarningModal(
